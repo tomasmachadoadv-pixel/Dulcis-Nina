@@ -527,8 +527,9 @@ function cacheSave() {
 //  API (tudo via GET para evitar CORS)
 // ════════════════════════════════════════════════════
 async function apiCall(params) {
-  const url = API_URL + '?' + new URLSearchParams(params).toString();
-  // timeout de 10s — evita travar indefinidamente
+  // Monta URL com encodeURIComponent por parâmetro
+  const parts = Object.entries(params).map(([k,v]) => k + '=' + encodeURIComponent(v));
+  const url = API_URL + '?' + parts.join('&');
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 10000);
   try {
@@ -539,7 +540,7 @@ async function apiCall(params) {
     return data;
   } catch(e) {
     clearTimeout(timer);
-    if (e.name === 'AbortError') throw new Error('Tempo esgotado — verifique a conexão');
+    if (e.name === 'AbortError') throw new Error('Tempo esgotado');
     throw e;
   }
 }
@@ -565,10 +566,16 @@ async function migrarCacheParaSheets() {
   const local  = JSON.parse(raw);
   const vendas = local.vendas || [];
   if (!vendas.length) return 0;
-  setSyncStatus('syncing', `Enviando ${vendas.length} venda(s)…`);
+  setSyncStatus('syncing', 'Enviando ' + vendas.length + ' venda(s)…');
   try {
-    if (local.meta > 0) await apiCall({ action:'set_meta', meta:local.meta });
-    await apiCall({ action:'add_many', vendas: encodeURIComponent(JSON.stringify(vendas)) });
+    if (local.meta > 0) await apiCall({ action:'set_meta', meta: local.meta });
+    const url = API_URL + '?action=add_many&vendas=' + encodeURIComponent(JSON.stringify(vendas));
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), 15000);
+    const res = await fetch(url, { signal: ctrl.signal });
+    clearTimeout(t);
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error || 'Erro');
     return vendas.length;
   } catch(e) {
     setSyncStatus('error','Erro na migração: ' + String(e.message).slice(0,35));
@@ -591,27 +598,31 @@ async function togglePagamento(id) {
   const idx = state.vendas.findIndex(v => v.id === id);
   if (idx < 0) return;
 
-  // Atualiza local imediatamente
   const novoStatus = !state.vendas[idx].pago;
   state.vendas[idx].pago = novoStatus;
   cacheSave();
   renderAll();
   showToast(novoStatus ? '✅ Marcado como pago' : '↩ Marcado como pendente');
 
-  // Pausa polling para não sobrescrever
   operacaoPendente = true;
   setSyncStatus('syncing', 'Salvando…');
 
   try {
-    // Estratégia robusta: deleta e recria com o campo pago correto
     const venda = { ...state.vendas[idx] };
-    await apiCall({ action:'delete_venda', id });
-    await apiCall({ action:'add_venda', venda: encodeURIComponent(JSON.stringify(venda)) });
-    setSyncStatus('ok', 'Salvo no Sheets ✓');
+    // Deleta linha antiga
+    await apiCall({ action:'delete_venda', id: String(id) });
+    // Recria com pago atualizado — JSON direto, sem encodeURIComponent
+    const url = API_URL + '?action=add_venda&venda=' + encodeURIComponent(JSON.stringify(venda));
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), 10000);
+    const res = await fetch(url, { signal: ctrl.signal });
+    clearTimeout(t);
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error || 'Erro ao salvar');
+    setSyncStatus('ok', 'Pago atualizado no Sheets ✓');
   } catch(e) {
-    setSyncStatus('error', 'Erro: ' + String(e.message).slice(0,35));
+    setSyncStatus('error', 'Erro: ' + String(e.message).slice(0,40));
   } finally {
-    // Retoma polling após 3s (garante que o Sheets processou)
     setTimeout(() => { operacaoPendente = false; }, 3000);
   }
 }
@@ -748,7 +759,13 @@ async function registrarVenda() {
   operacaoPendente = true;
   setSyncStatus('syncing','Salvando no Sheets…');
   try {
-    await apiCall({ action:'add_venda', venda: encodeURIComponent(JSON.stringify(venda)) });
+    const url = API_URL + '?action=add_venda&venda=' + encodeURIComponent(JSON.stringify(venda));
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), 10000);
+    const res = await fetch(url, { signal: ctrl.signal });
+    clearTimeout(t);
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error || 'Erro');
     const ts = new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
     setSyncStatus('ok','Sincronizado às ' + ts);
   } catch(e) {
@@ -1064,4 +1081,3 @@ document.addEventListener('DOMContentLoaded', async () => {
 </script>
 </body>
 </html>
-
