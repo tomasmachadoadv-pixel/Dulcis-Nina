@@ -1,0 +1,907 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Dulcis Nina</title>
+<!-- Fontes no <head> — carregamento garantido antes do render -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Comfortaa:wght@400;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --gold:      #B5832A;
+  --gold-lt:   #D4A855;
+  --gold-pale: #F0DEB8;
+  --gold-bg:   #FBF5E8;
+  --parchment: #F7F0E0;
+  --ivory:     #FDFAF3;
+  --rose:      #B5606A;
+  --rose-lt:   #D4939A;
+  --rose-pale: #F5E4E6;
+  --brown:     #3A2010;
+  --muted:     #8A7055;
+  --border:    #E2D5B8;
+  --white:     #FFFFFF;
+  --green:     #5A7A3A;
+}
+
+html {
+  font-size: 16px;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  font-family: 'Quicksand', 'Nunito', 'Segoe UI', sans-serif;
+  background: var(--ivory);
+  color: var(--brown);
+  min-height: 100vh;
+  padding: 0 0 80px;
+  max-width: 480px;
+  margin: 0 auto;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── HEADER ── */
+header {
+  background: var(--ivory);
+  text-align: center;
+  padding: 26px 20px 18px;
+  border-bottom: 1px solid var(--border);
+}
+.header-ornament { display: block; margin: 0 auto 6px; opacity: 0.55; }
+header h1 {
+  font-family: 'Comfortaa', 'Quicksand', cursive;
+  font-size: 2.3rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--gold);
+  line-height: 1;
+  margin-bottom: 4px;
+}
+.header-divider { display: flex; align-items: center; gap: 10px; justify-content: center; margin: 8px 0; }
+.header-divider span { flex: 1; height: 1px; background: var(--gold-pale); max-width: 60px; }
+.header-divider svg { opacity: 0.6; }
+header p { font-size: 0.72rem; font-weight: 600; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); }
+
+/* ── LAYOUT ── */
+.main-content { padding: 14px 14px 0; }
+
+/* ── SYNC ── */
+.sync-bar {
+  display: flex; align-items: center; justify-content: space-between;
+  background: var(--white); border: 1px solid var(--border);
+  border-radius: 12px; padding: 9px 14px; margin-bottom: 14px;
+  font-size: 0.72rem; font-weight: 700; color: var(--muted);
+}
+.sync-left { display: flex; align-items: center; gap: 7px; }
+.sync-dot { width: 8px; height: 8px; border-radius: 50%; background: #ccc; flex-shrink: 0; transition: background 0.3s; }
+.sync-dot.ok      { background: #7AB55A; }
+.sync-dot.syncing { background: var(--gold); animation: pulse 1s infinite; }
+.sync-dot.error   { background: var(--rose); }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+.btn-sync {
+  background: none; border: 1.5px solid var(--border); border-radius: 8px;
+  padding: 6px 12px; font-family: inherit; font-size: 0.68rem; font-weight: 700;
+  color: var(--muted); cursor: pointer; min-height: 34px; min-width: 44px;
+  -webkit-tap-highlight-color: transparent; touch-action: manipulation;
+  user-select: none; -webkit-user-select: none;
+}
+.btn-sync:active { background: var(--gold-bg); }
+
+/* ── META CARD ── */
+.meta-card {
+  background: var(--brown); border-radius: 20px;
+  padding: 22px 20px 20px; margin-bottom: 14px;
+  position: relative; overflow: hidden;
+}
+.meta-card::after {
+  content: ''; position: absolute; bottom: -20px; right: -20px;
+  width: 120px; height: 120px; pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 90'%3E%3Cpath d='M50 80 C20 55 5 40 5 25 C5 12 15 5 27 5 C36 5 44 10 50 18 C56 10 64 5 73 5 C85 5 95 12 95 25 C95 40 80 55 50 80Z' fill='none' stroke='%23B5832A' stroke-width='1.5' opacity='0.25'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-size: contain;
+}
+.meta-label { font-size: 0.63rem; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; color: var(--gold-lt); margin-bottom: 3px; }
+.meta-tablet-name { font-family: 'Comfortaa', cursive; font-size: 1.4rem; font-weight: 700; color: var(--white); margin-bottom: 16px; }
+.meta-values { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 12px; }
+.meta-current span:first-child, .meta-goal span:first-child { display: block; font-size: 0.67rem; font-weight: 700; color: var(--gold-lt); margin-bottom: 2px; }
+.meta-current strong { font-family: 'Comfortaa', cursive; font-size: 2rem; font-weight: 700; color: var(--white); line-height: 1; }
+.meta-goal { text-align: right; }
+.meta-goal strong { font-size: 0.95rem; font-weight: 700; color: var(--gold-lt); }
+.progress-track { background: rgba(255,255,255,0.12); border-radius: 999px; height: 10px; overflow: hidden; }
+.progress-fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg,var(--gold),var(--gold-lt)); transition: width .7s cubic-bezier(.4,0,.2,1); min-width: 3px; }
+.progress-pct { margin-top: 6px; text-align: right; font-size: 0.74rem; font-weight: 700; color: var(--gold-lt); }
+.progress-pct strong { color: var(--white); font-size: 0.9rem; }
+.falta-badge { margin-top: 12px; background: rgba(181,131,42,0.15); border: 1px solid rgba(181,131,42,0.3); border-radius: 12px; padding: 9px 14px; display: flex; justify-content: space-between; align-items: center; }
+.falta-badge span { font-size: 0.74rem; font-weight: 700; color: var(--gold-lt); }
+.falta-badge strong { color: var(--white); font-size: 0.93rem; font-weight: 700; }
+
+/* ── BANNER META ── */
+.goal-achieved { background: linear-gradient(135deg,#3A5C28,#5A7A3A); border-radius: 20px; padding: 20px; color: var(--white); text-align: center; margin-bottom: 14px; display: none; }
+.goal-achieved.show { display: block; }
+.goal-achieved .big { font-family: 'Comfortaa', cursive; font-size: 1.8rem; font-weight: 700; margin: 4px 0 6px; }
+.goal-achieved p { font-size: 0.83rem; font-weight: 600; opacity: 0.9; }
+
+/* ── KPIs ── */
+.kpis { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+.kpi-card { background: var(--white); border: 1px solid var(--border); border-radius: 16px; padding: 14px 13px 12px; box-shadow: 0 1px 8px rgba(58,32,16,.06); }
+.kpi-icon { font-size: 1.2rem; margin-bottom: 5px; display: block; }
+.kpi-value { font-family: 'Comfortaa', cursive; font-size: 1.4rem; font-weight: 700; color: var(--brown); line-height: 1; margin-bottom: 3px; }
+.kpi-label { font-size: 0.67rem; font-weight: 700; color: var(--muted); }
+
+/* ── CAIXINHAS ── */
+.caixinhas-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+.caixa { border-radius: 14px; padding: 12px 8px 10px; text-align: center; border: 1px solid transparent; }
+.caixa.giro    { background: var(--gold-bg);  border-color: var(--gold-pale); }
+.caixa.reserva { background: #F3EDE0; border-color: #E2D5B8; }
+.caixa.meta    { background: var(--rose-pale); border-color: #E8C4C8; }
+.caixa-icon { font-size: 1.1rem; display: block; margin-bottom: 3px; }
+.caixa-nome { font-size: 0.58rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 3px; line-height: 1.25; }
+.caixa.giro    .caixa-nome { color: var(--gold); }
+.caixa.reserva .caixa-nome { color: var(--muted); }
+.caixa.meta    .caixa-nome { color: var(--rose); }
+.caixa-valor { font-family: 'Comfortaa', cursive; font-size: 1rem; font-weight: 700; line-height: 1; margin-bottom: 1px; }
+.caixa.giro    .caixa-valor { color: var(--gold); }
+.caixa.reserva .caixa-valor { color: var(--muted); }
+.caixa.meta    .caixa-valor { color: var(--rose); }
+.caixa-sub { font-size: 0.58rem; font-weight: 600; color: var(--muted); }
+
+/* ── CARD ── */
+.card { background: var(--white); border: 1px solid var(--border); border-radius: 18px; padding: 18px 16px; box-shadow: 0 1px 8px rgba(58,32,16,.05); margin-bottom: 14px; }
+.card-title-ornament { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; }
+.ct-line { flex: 1; height: 1px; background: var(--border); }
+.ct-text { font-size: 0.62rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+
+/* ── TABS ── */
+.tabs { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; margin-bottom: 14px; }
+.tab-btn {
+  display: block; width: 100%; padding: 11px 4px;
+  border: 1.5px solid var(--border); background: var(--white);
+  border-radius: 12px; font-family: 'Quicksand', sans-serif;
+  font-size: 0.73rem; font-weight: 700; color: var(--muted);
+  cursor: pointer; text-align: center;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  user-select: none; -webkit-user-select: none;
+  /* sem transition — toque parece mais rápido */
+  min-height: 44px;
+}
+.tab-btn.active { background: var(--brown); border-color: var(--brown); color: var(--gold-lt); }
+.tab-pane { display: none; }
+.tab-pane.active { display: block; }
+
+/* ── SELETOR DOCE ── */
+.doce-selector { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+.doce-btn {
+  display: block; width: 100%;
+  border: 2px solid var(--border); background: var(--parchment);
+  border-radius: 14px; padding: 16px 10px; text-align: center;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  user-select: none; -webkit-user-select: none;
+  min-height: 90px;
+}
+.doce-btn.ativo { border-color: var(--gold); background: var(--gold-bg); box-shadow: 0 0 0 3px rgba(181,131,42,.15); }
+.doce-btn-icon  { font-size: 1.6rem; display: block; margin-bottom: 5px; pointer-events: none; }
+.doce-btn-nome  { font-family: 'Comfortaa', cursive; font-size: 0.88rem; font-weight: 700; color: var(--brown); line-height: 1.3; pointer-events: none; }
+.doce-btn-preco { font-size: 0.72rem; font-weight: 700; color: var(--muted); margin-top: 3px; pointer-events: none; }
+.doce-btn.ativo .doce-btn-nome { color: var(--gold); }
+
+/* ── FORM ── */
+.form-group { display: flex; flex-direction: column; gap: 5px; margin-bottom: 12px; }
+.form-label { font-size: 0.64rem; font-weight: 700; text-transform: uppercase; letter-spacing: .09em; color: var(--muted); }
+.form-input {
+  padding: 13px 12px; border: 1.5px solid var(--border); border-radius: 12px;
+  font-family: 'Quicksand', sans-serif; font-size: 1rem; font-weight: 600;
+  color: var(--brown); background: var(--parchment); outline: none;
+  transition: border-color .2s; min-height: 48px; width: 100%;
+  /* evita zoom em iOS */
+  font-size: max(1rem, 16px);
+}
+.form-input:focus { border-color: var(--gold); background: var(--ivory); }
+
+/* ── STEPPER ── */
+.stepper { display: flex; align-items: center; border: 1.5px solid var(--border); border-radius: 12px; overflow: hidden; background: var(--parchment); }
+.stepper-btn {
+  background: none; border: none; padding: 0;
+  font-size: 1.6rem; font-weight: 700; color: var(--gold);
+  min-height: 52px; width: 56px; flex-shrink: 0;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  user-select: none; -webkit-user-select: none;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+}
+.stepper-btn:active { background: var(--gold-bg); }
+.stepper-val { flex: 1; text-align: center; font-family: 'Comfortaa', cursive; font-size: 1.3rem; font-weight: 700; color: var(--brown); pointer-events: none; }
+
+/* ── BOTÕES PRINCIPAIS ── */
+.btn-add {
+  display: block; width: 100%; padding: 15px;
+  background: var(--gold); color: var(--white);
+  border: none; border-radius: 14px;
+  font-family: 'Quicksand', sans-serif; font-size: 1rem; font-weight: 700;
+  cursor: pointer; min-height: 54px; letter-spacing: .03em;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  user-select: none; -webkit-user-select: none;
+}
+.btn-add:active { background: #9A6D20; }
+.btn-add:disabled { background: #C8BFAA; cursor: default; }
+
+.config-row { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: flex-end; }
+.btn-save {
+  padding: 13px 16px; background: var(--brown); color: var(--gold-lt);
+  border: none; border-radius: 12px;
+  font-family: 'Quicksand', sans-serif; font-size: 0.88rem; font-weight: 700;
+  white-space: nowrap; cursor: pointer; min-height: 48px;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  user-select: none; -webkit-user-select: none;
+}
+.btn-save:active { background: #2A1408; }
+
+/* ── TABELA ── */
+.vendas-table { width: 100%; border-collapse: collapse; }
+.vendas-table th { font-size: 0.62rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); text-align: left; padding: 0 6px 10px; border-bottom: 1.5px solid var(--border); }
+.vendas-table td { padding: 10px 6px; font-size: 0.82rem; font-weight: 600; border-bottom: 1px solid #F0E8D8; color: var(--brown); vertical-align: middle; }
+.vendas-table tr:last-child td { border-bottom: none; }
+.badge-pacoca { display: inline-block; background: var(--gold-bg); color: var(--gold); font-size: 0.67rem; font-weight: 700; border-radius: 8px; padding: 3px 7px; border: 1px solid var(--gold-pale); }
+.badge-romeu  { display: inline-block; background: var(--rose-pale); color: var(--rose); font-size: 0.67rem; font-weight: 700; border-radius: 8px; padding: 3px 7px; border: 1px solid #E8C4C8; }
+.btn-del {
+  background: none; border: none; color: #C0A880; font-size: 1rem;
+  min-width: 44px; min-height: 44px; cursor: pointer; padding: 0;
+  display: flex; align-items: center; justify-content: center;
+  -webkit-tap-highlight-color: transparent; touch-action: manipulation;
+  user-select: none; -webkit-user-select: none;
+}
+.btn-del:active { color: var(--rose); }
+
+/* ── GRÁFICOS ── */
+.chart-wrap { position: relative; width: 100%; }
+.doughnut-wrap { width: 220px; max-width: 100%; margin: 0 auto; aspect-ratio: 1/1; position: relative; }
+
+/* ── PROJEÇÃO ── */
+.proj-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 10px; }
+.proj-cell { border-radius: 12px; padding: 12px 8px; text-align: center; }
+.proj-cell.dias { background: var(--gold-bg); border: 1px solid var(--gold-pale); }
+.proj-cell.prev { background: var(--rose-pale); border: 1px solid #E8C4C8; }
+.proj-cell.unid { background: #F0EDE0; border: 1px solid var(--border); }
+.proj-label { font-size: 0.58rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; margin-bottom: 3px; }
+.proj-cell.dias .proj-label { color: var(--gold); }
+.proj-cell.prev .proj-label { color: var(--rose); }
+.proj-cell.unid .proj-label { color: var(--muted); }
+.proj-value { font-family: 'Comfortaa', cursive; font-size: 1.9rem; font-weight: 700; line-height: 1; }
+.proj-value.sm { font-size: 1.25rem; }
+.proj-cell.dias .proj-value { color: var(--gold); }
+.proj-cell.prev .proj-value { color: var(--rose); }
+.proj-cell.unid .proj-value { color: var(--brown); }
+.proj-sub { font-size: 0.62rem; font-weight: 600; color: var(--muted); margin-top: 2px; }
+.proj-footer { font-size: .72rem; font-weight: 700; color: var(--muted); text-align: center; }
+
+/* ── EMPTY / TOAST ── */
+.empty-state { text-align: center; padding: 28px 0 20px; color: var(--muted); font-size: .83rem; font-weight: 600; }
+.empty-state .em-icon { font-size: 2rem; display: block; margin-bottom: 6px; }
+#toast {
+  position: fixed; bottom: 24px; left: 50%;
+  transform: translateX(-50%) translateY(70px);
+  background: var(--brown); color: var(--gold-lt);
+  padding: 12px 26px; border-radius: 999px;
+  font-size: .85rem; font-weight: 700; opacity: 0;
+  transition: all .32s cubic-bezier(.4,0,.2,1);
+  pointer-events: none; z-index: 9999;
+  max-width: 88vw; text-align: center;
+  border: 1px solid rgba(181,131,42,.3);
+  white-space: nowrap;
+}
+#toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<header>
+  <svg class="header-ornament" width="52" height="28" viewBox="0 0 52 28" fill="none">
+    <path d="M26 14 C20 6 10 2 4 6 C0 9 2 16 8 18 C14 20 20 17 26 14Z" fill="none" stroke="#B5832A" stroke-width="1" opacity="0.7"/>
+    <path d="M26 14 C32 6 42 2 48 6 C52 9 50 16 44 18 C38 20 32 17 26 14Z" fill="none" stroke="#B5832A" stroke-width="1" opacity="0.7"/>
+    <circle cx="26" cy="14" r="2" fill="#B5832A" opacity="0.6"/>
+  </svg>
+  <h1>Dulcis Nina</h1>
+  <div class="header-divider">
+    <span></span>
+    <svg width="14" height="12" viewBox="0 0 14 12"><path d="M7 11 C3 8 1 6 1 3.5 C1 1.8 2.3 1 3.8 1 C5 1 6.2 1.7 7 2.8 C7.8 1.7 9 1 10.2 1 C11.7 1 13 1.8 13 3.5 C13 6 11 8 7 11Z" fill="#B5832A" opacity="0.5"/></svg>
+    <span></span>
+  </div>
+  <p>Doces artesanais · Encomendas</p>
+</header>
+
+<div class="main-content">
+
+<div class="sync-bar">
+  <div class="sync-left">
+    <div class="sync-dot" id="syncDot"></div>
+    <span id="syncMsg">Carregando…</span>
+  </div>
+  <button class="btn-sync" id="btnSync">↻ Sync</button>
+</div>
+
+<div class="goal-achieved" id="goalBanner">
+  <div>✨</div>
+  <div class="big">Meta alcançada!</div>
+  <p>O tablet está garantido!<br>Cada docinho valeu. 🌹</p>
+</div>
+
+<div class="meta-card">
+  <div class="meta-label">Objetivo</div>
+  <div class="meta-tablet-name">🖥️ Tablet</div>
+  <div class="meta-values">
+    <div class="meta-current">
+      <span>Lucro acumulado</span>
+      <strong id="totalArrecadado">R$ 0,00</strong>
+    </div>
+    <div class="meta-goal">
+      <span>Meta</span>
+      <strong id="metaValor">—</strong>
+    </div>
+  </div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+  <div class="progress-pct" id="progressPct"><strong>0%</strong> concluído</div>
+  <div class="falta-badge">
+    <span>Ainda faltam</span>
+    <strong id="faltaValor">—</strong>
+  </div>
+</div>
+
+<div class="kpis">
+  <div class="kpi-card"><span class="kpi-icon">📦</span><div class="kpi-value" id="kpiVendas">0</div><div class="kpi-label">Registros</div></div>
+  <div class="kpi-card"><span class="kpi-icon">🍬</span><div class="kpi-value" id="kpiUnidades">0</div><div class="kpi-label">Unidades vendidas</div></div>
+  <div class="kpi-card"><span class="kpi-icon">🗓️</span><div class="kpi-value" id="kpiHoje">R$ 0</div><div class="kpi-label">Lucro hoje</div></div>
+  <div class="kpi-card"><span class="kpi-icon">📅</span><div class="kpi-value" id="kpiSemana">R$ 0</div><div class="kpi-label">Lucro 7 dias</div></div>
+</div>
+
+<div class="card">
+  <div class="card-title-ornament"><div class="ct-line"></div><div class="ct-text">Caixinhas</div><div class="ct-line"></div></div>
+  <div class="caixinhas-grid">
+    <div class="caixa giro"><span class="caixa-icon">🔄</span><div class="caixa-nome">Giro<br>Matéria-prima</div><div class="caixa-valor" id="cxGiro">R$ 0,00</div><div class="caixa-sub" id="cxGiroSub">0 un.</div></div>
+    <div class="caixa reserva"><span class="caixa-icon">⛽</span><div class="caixa-nome">Reserva<br>Gás / Custos</div><div class="caixa-valor" id="cxReserva">R$ 0,00</div><div class="caixa-sub" id="cxReservaSub">0 un.</div></div>
+    <div class="caixa meta"><span class="caixa-icon">🖥️</span><div class="caixa-nome">Meta<br>Tablet</div><div class="caixa-valor" id="cxMeta">R$ 0,00</div><div class="caixa-sub" id="cxMetaSub">0 un.</div></div>
+  </div>
+</div>
+
+<div class="tabs" id="tabsNav">
+  <button class="tab-btn active" data-tab="registrar">➕ Registrar</button>
+  <button class="tab-btn" data-tab="graficos">📊 Gráficos</button>
+  <button class="tab-btn" data-tab="historico">📋 Histórico</button>
+</div>
+
+<!-- TAB REGISTRAR -->
+<div class="tab-pane active" id="tab-registrar">
+  <div class="card">
+    <div class="card-title-ornament"><div class="ct-line"></div><div class="ct-text">Registrar venda</div><div class="ct-line"></div></div>
+    <div class="doce-selector">
+      <div class="doce-btn" id="btnPacoca">
+        <span class="doce-btn-icon">🥜</span>
+        <div class="doce-btn-nome">Paçoca de Colher</div>
+        <div class="doce-btn-preco">R$ 7,50 · 100g</div>
+      </div>
+      <div class="doce-btn" id="btnRomeu">
+        <span class="doce-btn-icon">🧀</span>
+        <div class="doce-btn-nome">Romeu e Julieta</div>
+        <div class="doce-btn-preco">R$ 7,50 · 100g</div>
+      </div>
+    </div>
+    <div class="form-group">
+      <div class="form-label">Quantidade</div>
+      <div class="stepper">
+        <button class="stepper-btn" id="btnMenos" type="button">−</button>
+        <div class="stepper-val" id="qtdDisplay">1</div>
+        <button class="stepper-btn" id="btnMais" type="button">+</button>
+      </div>
+    </div>
+    <div class="form-group">
+      <div class="form-label">Data</div>
+      <input class="form-input" type="date" id="fData">
+    </div>
+    <div class="form-group" style="margin-bottom:8px">
+      <div class="form-label">Observação (opcional)</div>
+      <input class="form-input" type="text" id="fObs" placeholder="ex: Encomenda da Maria">
+    </div>
+    <button class="btn-add" id="btnRegistrar" type="button">🌹 Registrar venda</button>
+  </div>
+  <div class="card">
+    <div class="card-title-ornament"><div class="ct-line"></div><div class="ct-text">Configurar meta</div><div class="ct-line"></div></div>
+    <div class="config-row">
+      <div class="form-group" style="margin-bottom:0">
+        <div class="form-label">Valor da meta do tablet (R$)</div>
+        <input class="form-input" type="number" id="cfgMeta" placeholder="ex: 1500" min="1" step="0.01" inputmode="decimal">
+      </div>
+      <button class="btn-save" id="btnSalvarMeta" type="button">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- TAB GRÁFICOS -->
+<div class="tab-pane" id="tab-graficos">
+  <div class="card">
+    <div class="card-title-ornament"><div class="ct-line"></div><div class="ct-text">Projeção para a meta</div><div class="ct-line"></div></div>
+    <div id="projecaoWrap"><div style="font-size:.82rem;color:var(--muted);font-weight:600;text-align:center;padding:4px 0">Defina a meta e registre vendas para ver a projeção.</div></div>
+  </div>
+  <div class="card">
+    <div class="card-title-ornament"><div class="ct-line"></div><div class="ct-text">Evolução do lucro acumulado</div><div class="ct-line"></div></div>
+    <div class="chart-wrap" style="height:200px"><canvas id="chartEvolucao"></canvas></div>
+  </div>
+  <div class="card">
+    <div class="card-title-ornament"><div class="ct-line"></div><div class="ct-text">Lucro por dia · últimos 14 dias</div><div class="ct-line"></div></div>
+    <div class="chart-wrap" style="height:190px"><canvas id="chartDias"></canvas></div>
+  </div>
+  <div class="kpis" style="margin-bottom:14px">
+    <div class="kpi-card"><span class="kpi-icon">🏆</span><div class="kpi-value" id="kpiMelhorDia">—</div><div class="kpi-label">Melhor dia (lucro)</div></div>
+    <div class="kpi-card"><span class="kpi-icon">📊</span><div class="kpi-value" id="kpiMediaDia">R$ 0</div><div class="kpi-label">Média diária</div></div>
+    <div class="kpi-card"><span class="kpi-icon">🥜</span><div class="kpi-value" id="kpiQtdPacoca">0</div><div class="kpi-label">Paçocas vendidas</div></div>
+    <div class="kpi-card"><span class="kpi-icon">🧀</span><div class="kpi-value" id="kpiQtdRomeu">0</div><div class="kpi-label">Romeu e Julieta</div></div>
+  </div>
+  <div class="card">
+    <div class="card-title-ornament"><div class="ct-line"></div><div class="ct-text">Mix de doces · unidades</div><div class="ct-line"></div></div>
+    <div class="doughnut-wrap"><canvas id="chartMix"></canvas></div>
+  </div>
+</div>
+
+<!-- TAB HISTÓRICO -->
+<div class="tab-pane" id="tab-historico">
+  <div class="card">
+    <div class="card-title-ornament"><div class="ct-line"></div><div class="ct-text">Histórico de vendas</div><div class="ct-line"></div></div>
+    <div id="tabelaWrap"><div class="empty-state"><span class="em-icon">🌹</span>Nenhuma venda ainda.<br>Bora vender!</div></div>
+  </div>
+</div>
+
+</div><!-- /main-content -->
+<div id="toast"></div>
+
+<script>
+'use strict';
+// ════════════════════════════════════════════════════
+//  CONSTANTES
+// ════════════════════════════════════════════════════
+const DOCES = {
+  pacoca: { nome:'Paçoca de Colher', preco:7.50, giro:2.35, reserva:0.75, meta:4.40, badge:'badge-pacoca', emoji:'🥜' },
+  romeu:  { nome:'Romeu e Julieta',  preco:7.50, giro:3.09, reserva:0.75, meta:3.66, badge:'badge-romeu',  emoji:'🧀' }
+};
+const LS_KEY  = 'dulcisnina_v1';
+const POLL_MS = 15000;
+const API_URL = 'https://script.google.com/macros/s/AKfycbySuqn2yjexjF0uxkZXj8lUqm--gytUjfkCCixnL98HcmfpqhI1lQwwCUGkuTHeQEMaMg/exec';
+
+// ════════════════════════════════════════════════════
+//  ESTADO
+// ════════════════════════════════════════════════════
+let state     = { meta:0, vendas:[] };
+let doceAtual = null;
+let qtdAtual  = 1;
+let chartEvolucao=null, chartDias=null, chartMix=null;
+
+// ════════════════════════════════════════════════════
+//  CACHE LOCAL
+// ════════════════════════════════════════════════════
+function cacheLoad() {
+  try {
+    const r = localStorage.getItem(LS_KEY)
+            || localStorage.getItem('docinhometa_v2');
+    if (r) state = JSON.parse(r);
+  } catch(_) {}
+}
+function cacheSave() {
+  try { localStorage.setItem(LS_KEY, JSON.stringify(state)); } catch(_) {}
+}
+
+// ════════════════════════════════════════════════════
+//  API (tudo via GET para evitar CORS)
+// ════════════════════════════════════════════════════
+async function apiCall(params) {
+  const url = API_URL + '?' + new URLSearchParams(params).toString();
+  const res  = await fetch(url);
+  const data = await res.json();
+  if (!data.ok) throw new Error(data.error || 'Erro');
+  return data;
+}
+
+async function syncFromSheets(showMsg) {
+  setSyncStatus('syncing','Sincronizando…');
+  try {
+    const data = await apiCall({ action:'get_all' });
+    state.meta   = data.meta   || 0;
+    state.vendas = data.vendas || [];
+    cacheSave();
+    renderAll();
+    const ts = new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+    setSyncStatus('ok', showMsg ? `Atualizado às ${ts}` : `${state.vendas.length} venda(s) carregada(s)`);
+  } catch(e) {
+    setSyncStatus('error', 'Erro: ' + String(e.message).slice(0,40));
+  }
+}
+
+async function migrarCacheParaSheets() {
+  const raw = localStorage.getItem(LS_KEY) || localStorage.getItem('docinhometa_v2');
+  if (!raw) return 0;
+  const local  = JSON.parse(raw);
+  const vendas = local.vendas || [];
+  if (!vendas.length) return 0;
+  setSyncStatus('syncing', `Enviando ${vendas.length} venda(s)…`);
+  try {
+    if (local.meta > 0) await apiCall({ action:'set_meta', meta:local.meta });
+    await apiCall({ action:'add_many', vendas: encodeURIComponent(JSON.stringify(vendas)) });
+    return vendas.length;
+  } catch(e) {
+    setSyncStatus('error','Erro na migração: ' + String(e.message).slice(0,35));
+    return -1;
+  }
+}
+
+function startPolling() {
+  setInterval(() => syncFromSheets(false), POLL_MS);
+}
+
+// ════════════════════════════════════════════════════
+//  STATUS
+// ════════════════════════════════════════════════════
+function setSyncStatus(status, msg) {
+  document.getElementById('syncDot').className  = 'sync-dot ' + status;
+  document.getElementById('syncMsg').textContent = msg;
+}
+
+// ════════════════════════════════════════════════════
+//  UTILS
+// ════════════════════════════════════════════════════
+const fmtBRL = v => v.toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+function todayStr() {
+  const d = new Date();
+  return d.getFullYear() + '-'
+    + String(d.getMonth()+1).padStart(2,'0') + '-'
+    + String(d.getDate()).padStart(2,'0');
+}
+function dateAdd(s, n) {
+  const d = new Date(s+'T00:00:00');
+  d.setDate(d.getDate()+n);
+  return d.getFullYear() + '-'
+    + String(d.getMonth()+1).padStart(2,'0') + '-'
+    + String(d.getDate()).padStart(2,'0');
+}
+function fmtShort(s) { const [,m,d] = s.split('-'); return d+'/'+m; }
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+// ════════════════════════════════════════════════════
+//  HELPER DE CLIQUE — funciona em toque e mouse
+// ════════════════════════════════════════════════════
+function onTap(el, fn) {
+  let moved = false;
+  el.addEventListener('touchstart', () => { moved = false; }, { passive:true });
+  el.addEventListener('touchmove',  () => { moved = true;  }, { passive:true });
+  el.addEventListener('touchend', (e) => {
+    if (!moved) { e.preventDefault(); fn(); }
+  });
+  el.addEventListener('click', fn);
+}
+
+// ════════════════════════════════════════════════════
+//  EVENTOS
+// ════════════════════════════════════════════════════
+function initEventos() {
+  // Tabs
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    onTap(btn, () => {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+      if (btn.dataset.tab === 'graficos') renderGraficos();
+    });
+  });
+
+  // Sync
+  onTap(document.getElementById('btnSync'), () => syncFromSheets(true));
+
+  // Seletor de doce
+  onTap(document.getElementById('btnPacoca'), () => selecionarDoce('pacoca'));
+  onTap(document.getElementById('btnRomeu'),  () => selecionarDoce('romeu'));
+
+  // Stepper
+  onTap(document.getElementById('btnMenos'), () => changeQtd(-1));
+  onTap(document.getElementById('btnMais'),  () => changeQtd(1));
+
+  // Salvar meta
+  onTap(document.getElementById('btnSalvarMeta'), salvarMeta);
+
+  // Registrar
+  onTap(document.getElementById('btnRegistrar'), registrarVenda);
+}
+
+function selecionarDoce(tipo) {
+  doceAtual = tipo;
+  document.getElementById('btnPacoca').classList.toggle('ativo', tipo === 'pacoca');
+  document.getElementById('btnRomeu').classList.toggle('ativo',  tipo === 'romeu');
+  document.getElementById('btnRegistrar').disabled = false;
+}
+
+function changeQtd(d) {
+  qtdAtual = Math.max(1, qtdAtual + d);
+  document.getElementById('qtdDisplay').textContent = qtdAtual;
+}
+
+async function salvarMeta() {
+  const v = parseFloat(document.getElementById('cfgMeta').value);
+  if (!v || v <= 0) { showToast('Informe um valor válido'); return; }
+  state.meta = v;
+  cacheSave();
+  renderAll();
+  showToast('Meta salva! ✨');
+  setSyncStatus('syncing','Salvando meta…');
+  try {
+    await apiCall({ action:'set_meta', meta:v });
+    setSyncStatus('ok','Meta salva no Sheets ✓');
+  } catch(e) {
+    setSyncStatus('error','Erro: ' + String(e.message).slice(0,35));
+  }
+}
+
+async function registrarVenda() {
+  if (!doceAtual) { showToast('Selecione o tipo de doce'); return; }
+  const d = DOCES[doceAtual];
+  const venda = {
+    id:      Date.now(),
+    tipo:    doceAtual,
+    qtd:     qtdAtual,
+    preco:   d.preco,
+    total:   +(d.preco   * qtdAtual).toFixed(2),
+    giro:    +(d.giro    * qtdAtual).toFixed(2),
+    reserva: +(d.reserva * qtdAtual).toFixed(2),
+    meta:    +(d.meta    * qtdAtual).toFixed(2),
+    data:    document.getElementById('fData').value || todayStr(),
+    obs:     document.getElementById('fObs').value.trim()
+  };
+
+  state.vendas.unshift(venda);
+  cacheSave();
+  qtdAtual = 1;
+  document.getElementById('qtdDisplay').textContent = '1';
+  document.getElementById('fObs').value = '';
+  renderAll();
+  showToast(d.emoji + ' ' + d.nome + ' × ' + venda.qtd + ' registrado!');
+
+  setSyncStatus('syncing','Salvando no Sheets…');
+  try {
+    await apiCall({ action:'add_venda', venda: encodeURIComponent(JSON.stringify(venda)) });
+    const ts = new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+    setSyncStatus('ok','Sincronizado às ' + ts);
+  } catch(e) {
+    setSyncStatus('error','Erro: ' + String(e.message).slice(0,35));
+  }
+}
+
+async function removerVenda(id) {
+  state.vendas = state.vendas.filter(v => v.id !== id);
+  cacheSave();
+  renderAll();
+  showToast('Venda removida');
+  setSyncStatus('syncing','Removendo…');
+  try {
+    await apiCall({ action:'delete_venda', id });
+    setSyncStatus('ok','Removido do Sheets ✓');
+  } catch(e) {
+    setSyncStatus('error','Erro: ' + String(e.message).slice(0,35));
+  }
+}
+
+// ════════════════════════════════════════════════════
+//  RENDER
+// ════════════════════════════════════════════════════
+function renderAll() {
+  renderMeta(); renderKPIs(); renderCaixinhas(); renderTabela();
+  if (document.getElementById('tab-graficos').classList.contains('active')) renderGraficos();
+}
+
+function renderMeta() {
+  const lucro = state.vendas.reduce((s,v) => s+v.meta, 0);
+  const meta  = state.meta || 0;
+  const pct   = meta > 0 ? Math.min(100,(lucro/meta)*100) : 0;
+  document.getElementById('totalArrecadado').textContent = fmtBRL(lucro);
+  document.getElementById('metaValor').textContent       = meta > 0 ? fmtBRL(meta) : '—';
+  document.getElementById('progressFill').style.width    = pct.toFixed(1)+'%';
+  document.getElementById('progressPct').innerHTML       = '<strong>'+pct.toFixed(0)+'%</strong> concluído';
+  document.getElementById('faltaValor').textContent      = meta > 0 ? fmtBRL(Math.max(0,meta-lucro)) : '— (defina a meta)';
+  document.getElementById('goalBanner').classList.toggle('show', meta > 0 && lucro >= meta);
+  const cfgEl = document.getElementById('cfgMeta');
+  if (!cfgEl.value && meta > 0) cfgEl.value = meta;
+}
+
+function renderKPIs() {
+  const v    = state.vendas;
+  const hoje = todayStr();
+  const d7   = dateAdd(hoje,-7);
+  document.getElementById('kpiVendas').textContent   = v.length;
+  document.getElementById('kpiUnidades').textContent = v.reduce((s,x)=>s+x.qtd,0);
+  document.getElementById('kpiHoje').textContent     = fmtBRL(v.filter(x=>x.data===hoje).reduce((s,x)=>s+x.meta,0));
+  document.getElementById('kpiSemana').textContent   = fmtBRL(v.filter(x=>x.data>d7).reduce((s,x)=>s+x.meta,0));
+}
+
+function renderCaixinhas() {
+  const v  = state.vendas;
+  const un = v.reduce((s,x)=>s+x.qtd,0);
+  document.getElementById('cxGiro').textContent       = fmtBRL(v.reduce((s,x)=>s+x.giro,0));
+  document.getElementById('cxGiroSub').textContent    = un+' un.';
+  document.getElementById('cxReserva').textContent    = fmtBRL(v.reduce((s,x)=>s+x.reserva,0));
+  document.getElementById('cxReservaSub').textContent = un+' un.';
+  document.getElementById('cxMeta').textContent       = fmtBRL(v.reduce((s,x)=>s+x.meta,0));
+  document.getElementById('cxMetaSub').textContent    = un+' un.';
+}
+
+function renderTabela() {
+  const wrap = document.getElementById('tabelaWrap');
+  if (!state.vendas.length) {
+    wrap.innerHTML = '<div class="empty-state"><span class="em-icon">🌹</span>Nenhuma venda ainda.<br>Bora vender!</div>';
+    return;
+  }
+  const rows = state.vendas.map(v => {
+    const d = DOCES[v.tipo];
+    const dt = v.data ? v.data.split('-').reverse().join('/') : '—';
+    return '<tr>'
+      + '<td style="white-space:nowrap">'+dt+'</td>'
+      + '<td><span class="'+d.badge+'">'+d.emoji+' '+d.nome.split(' ')[0]+'</span></td>'
+      + '<td style="text-align:center;font-weight:700">'+v.qtd+'</td>'
+      + '<td style="white-space:nowrap">'+fmtBRL(v.total)+'</td>'
+      + '<td><button class="btn-del" data-id="'+v.id+'" type="button">✕</button></td>'
+      + '</tr>';
+  }).join('');
+  wrap.innerHTML = '<table class="vendas-table"><thead><tr><th>Data</th><th>Doce</th><th style="text-align:center">Qtd</th><th>Total</th><th></th></tr></thead><tbody>'+rows+'</tbody></table>';
+  wrap.querySelectorAll('.btn-del').forEach(btn => {
+    onTap(btn, () => removerVenda(Number(btn.dataset.id)));
+  });
+}
+
+// ════════════════════════════════════════════════════
+//  GRÁFICOS
+// ════════════════════════════════════════════════════
+function renderGraficos() {
+  const v          = state.vendas;
+  const qtdP       = v.filter(x=>x.tipo==='pacoca').reduce((s,x)=>s+x.qtd,0);
+  const qtdR       = v.filter(x=>x.tipo==='romeu').reduce((s,x)=>s+x.qtd,0);
+  const diasU      = [...new Set(v.map(x=>x.data))];
+  const totalLucro = v.reduce((s,x)=>s+x.meta,0);
+  const media      = diasU.length > 0 ? totalLucro/diasU.length : 0;
+  const lpd        = {};
+  v.forEach(x => { lpd[x.data] = (lpd[x.data]||0) + x.meta; });
+  const melhor = Object.entries(lpd).sort((a,b)=>b[1]-a[1])[0];
+
+  document.getElementById('kpiQtdPacoca').textContent = qtdP;
+  document.getElementById('kpiQtdRomeu').textContent  = qtdR;
+  document.getElementById('kpiMediaDia').textContent  = fmtBRL(media);
+  document.getElementById('kpiMelhorDia').textContent = melhor ? fmtShort(melhor[0]) : '—';
+
+  renderProjecao(totalLucro, media);
+
+  // Evolução acumulada
+  const acumPD = {};
+  v.forEach(x => { acumPD[x.data] = (acumPD[x.data]||0) + x.meta; });
+  const datas = Object.keys(acumPD).sort();
+  let r = 0;
+  const eLabels=[], eData=[], eMeta=[];
+  datas.forEach(d => {
+    r += acumPD[d];
+    eLabels.push(fmtShort(d));
+    eData.push(+r.toFixed(2));
+    eMeta.push(state.meta||null);
+  });
+  if (chartEvolucao) chartEvolucao.destroy();
+  chartEvolucao = new Chart(document.getElementById('chartEvolucao'), {
+    type: 'line',
+    data: { labels: eLabels, datasets: [
+      { label:'Lucro acumulado', data:eData, borderColor:'#B5832A', backgroundColor:'rgba(181,131,42,0.1)', fill:true, tension:0.4, pointRadius:4, pointBackgroundColor:'#B5832A', borderWidth:2.5 },
+      ...(state.meta>0 ? [{ label:'Meta', data:eMeta, borderColor:'#B5606A', borderDash:[5,4], borderWidth:1.5, pointRadius:0, fill:false }] : [])
+    ]},
+    options: chartOpts(true)
+  });
+
+  // Barras por dia
+  const hoje = todayStr();
+  const d14  = [];
+  for (let i=13;i>=0;i--) d14.push(dateAdd(hoje,-i));
+  const l14 = d14.map(d => +(lpd[d]||0).toFixed(2));
+  if (chartDias) chartDias.destroy();
+  chartDias = new Chart(document.getElementById('chartDias'), {
+    type: 'bar',
+    data: { labels: d14.map(fmtShort), datasets: [
+      { label:'Lucro (R$)', data:l14, backgroundColor:l14.map(x=>x>0?'rgba(181,131,42,0.82)':'rgba(181,131,42,0.13)'), borderRadius:6, borderSkipped:false }
+    ]},
+    options: chartOpts(false)
+  });
+
+  // Doughnut
+  if (chartMix) chartMix.destroy();
+  if (qtdP+qtdR > 0) {
+    chartMix = new Chart(document.getElementById('chartMix'), {
+      type: 'doughnut',
+      data: {
+        labels: ['🥜 Paçoca de Colher','🧀 Romeu e Julieta'],
+        datasets: [{ data:[qtdP,qtdR], backgroundColor:['#B5832A','#B5606A'], borderWidth:0, hoverOffset:6 }]
+      },
+      options: { responsive:true, maintainAspectRatio:true, aspectRatio:1, cutout:'60%',
+        plugins: {
+          legend: { position:'bottom', labels:{ font:{family:'Quicksand',size:12,weight:'700'}, color:'#3A2010', padding:14, usePointStyle:true, pointStyleWidth:10 }},
+          tooltip: { callbacks:{ label: ctx => ' '+ctx.label+': '+ctx.raw+' un.' }}
+        }
+      }
+    });
+  }
+}
+
+function renderProjecao(lucro, media) {
+  const wrap = document.getElementById('projecaoWrap');
+  const meta = state.meta || 0;
+  if (meta <= 0 || media <= 0) {
+    wrap.innerHTML = '<div style="font-size:.82rem;color:var(--muted);font-weight:600;text-align:center;padding:4px 0">Defina a meta e registre vendas para ver a projeção.</div>';
+    return;
+  }
+  const falta = Math.max(0, meta-lucro);
+  if (falta <= 0) {
+    wrap.innerHTML = '<div style="font-size:1.05rem;font-weight:700;color:var(--green);text-align:center;padding:4px 0">🎉 Meta alcançada!</div>';
+    return;
+  }
+  const dias       = Math.ceil(falta/media);
+  const dataFmt    = dateAdd(todayStr(), dias).split('-').reverse().join('/');
+  const totalUnid  = state.vendas.reduce((s,x)=>s+x.qtd,0);
+  const lpu        = totalUnid > 0 ? lucro/totalUnid : 0;
+  const unidFaltam = lpu > 0 ? Math.ceil(falta/lpu) : null;
+
+  wrap.innerHTML = '<div class="proj-grid">'
+    + '<div class="proj-cell dias"><div class="proj-label">Dias</div><div class="proj-value">'+dias+'</div><div class="proj-sub">na média atual</div></div>'
+    + '<div class="proj-cell prev"><div class="proj-label">Previsão</div><div class="proj-value sm">'+dataFmt+'</div><div class="proj-sub">se manter o ritmo</div></div>'
+    + '<div class="proj-cell unid"><div class="proj-label">Unidades</div><div class="proj-value">'+(unidFaltam??'—')+'</div><div class="proj-sub">doces p/ fechar</div></div>'
+    + '</div>'
+    + '<div class="proj-footer">Média diária: <span style="color:var(--brown)">'+fmtBRL(media)+'</span> &nbsp;·&nbsp; Faltam: <span style="color:var(--brown)">'+fmtBRL(falta)+'</span></div>';
+}
+
+function chartOpts(legend) {
+  return {
+    responsive: true, maintainAspectRatio: false,
+    plugins: {
+      legend: { display:legend, labels:{ font:{family:'Quicksand',size:11,weight:'700'}, color:'#3A2010', boxWidth:12, padding:10 }},
+      tooltip: { callbacks:{ label: ctx => ' '+ctx.dataset.label+': '+fmtBRL(ctx.raw) }, bodyFont:{family:'Quicksand'} }
+    },
+    scales: {
+      x: { ticks:{ font:{family:'Quicksand',size:10,weight:'700'}, color:'#8A7055', maxRotation:0 }, grid:{display:false} },
+      y: { ticks:{ font:{family:'Quicksand',size:10}, color:'#8A7055', callback: v=>'R$'+v.toFixed(0) }, grid:{color:'rgba(0,0,0,0.04)'} }
+    }
+  };
+}
+
+// ════════════════════════════════════════════════════
+//  INIT
+// ════════════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', async () => {
+  initEventos();
+  cacheLoad();
+  document.getElementById('fData').value = todayStr();
+  document.getElementById('btnRegistrar').disabled = true;
+  renderAll();
+  if (state.meta > 0) document.getElementById('cfgMeta').value = state.meta;
+
+  // Migra dados locais se houver
+  const raw = localStorage.getItem(LS_KEY) || localStorage.getItem('docinhometa_v2');
+  const local = raw ? JSON.parse(raw) : null;
+  if (local && (local.vendas||[]).length > 0) {
+    const qtd = await migrarCacheParaSheets();
+    if (qtd > 0) showToast('✅ '+qtd+' venda(s) enviadas para o Sheets!');
+  }
+
+  await syncFromSheets(false);
+  startPolling();
+});
+</script>
+</body>
+</html>
