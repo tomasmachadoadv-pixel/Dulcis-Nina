@@ -577,12 +577,44 @@ async function migrarCacheParaSheets() {
 }
 
 function startPolling() {
-  setInterval(() => syncFromSheets(false), POLL_MS);
+  setInterval(() => {
+    if (!operacaoPendente) syncFromSheets(false);
+  }, POLL_MS);
 }
 
 // ════════════════════════════════════════════════════
-//  STATUS
+//  PAGAMENTO
 // ════════════════════════════════════════════════════
+let operacaoPendente = false;
+
+async function togglePagamento(id) {
+  const idx = state.vendas.findIndex(v => v.id === id);
+  if (idx < 0) return;
+
+  // Atualiza local imediatamente
+  const novoStatus = !state.vendas[idx].pago;
+  state.vendas[idx].pago = novoStatus;
+  cacheSave();
+  renderAll();
+  showToast(novoStatus ? '✅ Marcado como pago' : '↩ Marcado como pendente');
+
+  // Pausa polling para não sobrescrever
+  operacaoPendente = true;
+  setSyncStatus('syncing', 'Salvando…');
+
+  try {
+    // Estratégia robusta: deleta e recria com o campo pago correto
+    const venda = { ...state.vendas[idx] };
+    await apiCall({ action:'delete_venda', id });
+    await apiCall({ action:'add_venda', venda: encodeURIComponent(JSON.stringify(venda)) });
+    setSyncStatus('ok', 'Salvo no Sheets ✓');
+  } catch(e) {
+    setSyncStatus('error', 'Erro: ' + String(e.message).slice(0,35));
+  } finally {
+    // Retoma polling após 3s (garante que o Sheets processou)
+    setTimeout(() => { operacaoPendente = false; }, 3000);
+  }
+}
 function setSyncStatus(status, msg) {
   document.getElementById('syncDot').className  = 'sync-dot ' + status;
   document.getElementById('syncMsg').textContent = msg;
@@ -701,7 +733,8 @@ async function registrarVenda() {
     reserva: +(d.reserva * qtdAtual).toFixed(2),
     meta:    +(d.meta    * qtdAtual).toFixed(2),
     data:    document.getElementById('fData').value || todayStr(),
-    obs:     document.getElementById('fObs').value.trim()
+    obs:     document.getElementById('fObs').value.trim(),
+    pago:    false
   };
 
   state.vendas.unshift(venda);
@@ -712,6 +745,7 @@ async function registrarVenda() {
   renderAll();
   showToast(d.emoji + ' ' + d.nome + ' × ' + venda.qtd + ' registrado!');
 
+  operacaoPendente = true;
   setSyncStatus('syncing','Salvando no Sheets…');
   try {
     await apiCall({ action:'add_venda', venda: encodeURIComponent(JSON.stringify(venda)) });
@@ -719,6 +753,8 @@ async function registrarVenda() {
     setSyncStatus('ok','Sincronizado às ' + ts);
   } catch(e) {
     setSyncStatus('error','Erro: ' + String(e.message).slice(0,35));
+  } finally {
+    setTimeout(() => { operacaoPendente = false; }, 3000);
   }
 }
 
@@ -727,12 +763,15 @@ async function removerVenda(id) {
   cacheSave();
   renderAll();
   showToast('Venda removida');
+  operacaoPendente = true;
   setSyncStatus('syncing','Removendo…');
   try {
     await apiCall({ action:'delete_venda', id });
     setSyncStatus('ok','Removido do Sheets ✓');
   } catch(e) {
     setSyncStatus('error','Erro: ' + String(e.message).slice(0,35));
+  } finally {
+    setTimeout(() => { operacaoPendente = false; }, 3000);
   }
 }
 
@@ -845,27 +884,7 @@ function renderTabela() {
 }
 
 // ════════════════════════════════════════════════════
-//  PAGAMENTO
-// ════════════════════════════════════════════════════
-async function togglePagamento(id) {
-  const idx = state.vendas.findIndex(v => v.id === id);
-  if (idx < 0) return;
-  state.vendas[idx].pago = !state.vendas[idx].pago;
-  cacheSave();
-  renderAll();
-  const status = state.vendas[idx].pago ? 'Marcado como pago ✓' : 'Marcado como pendente';
-  showToast(status);
-  setSyncStatus('syncing','Atualizando…');
-  try {
-    await apiCall({ action:'update_pago', id, pago: state.vendas[idx].pago ? '1':'0' });
-    setSyncStatus('ok','Atualizado no Sheets ✓');
-  } catch(e) {
-    setSyncStatus('error','Erro: '+String(e.message).slice(0,35));
-  }
-}
-
-// ════════════════════════════════════════════════════
-//  GRÁFICOS
+//  STATUS
 // ════════════════════════════════════════════════════
 // Normaliza datas que chegam do Sheets com hora ou espaços
 function normDate(s) {
@@ -1045,3 +1064,4 @@ document.addEventListener('DOMContentLoaded', async () => {
 </script>
 </body>
 </html>
+
