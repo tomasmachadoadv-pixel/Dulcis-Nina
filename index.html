@@ -991,23 +991,20 @@ function chartOpts(legend) {
 // ════════════════════════════════════════════════════
 document.addEventListener('DOMContentLoaded', async () => {
   initEventos();
-  cacheLoad();
   document.getElementById('fData').value = todayStr();
   document.getElementById('btnRegistrar').disabled = true;
+
+  // 1. Mostra cache local enquanto carrega (evita tela em branco)
+  cacheLoad();
   renderAll();
   if (state.meta > 0) document.getElementById('cfgMeta').value = state.meta;
 
-  // Migra dados locais se houver
-  const raw = localStorage.getItem(LS_KEY) || localStorage.getItem('docinhometa_v2');
-  const local = raw ? JSON.parse(raw) : null;
-  if (local && (local.vendas||[]).length > 0) {
-    const qtd = await migrarCacheParaSheets();
-    if (qtd > 0) showToast('✅ '+qtd+' venda(s) enviadas para o Sheets!');
-  }
+  // 2. Busca dados frescos do Sheets (fonte de verdade)
+  setSyncStatus('syncing', 'Carregando…');
+  try {
+    const data = await apiCall({ action:'get_all' });
+    const temDadosNoSheets = (data.vendas||[]).length > 0 || data.meta > 0;
 
-  await syncFromSheets(false);
-  startPolling();
-});
-</script>
-</body>
-</html>
+    if (temDadosNoSheets) {
+      // Sheets tem dados — usa direto, ignora cache local
+      state.meta   = data
