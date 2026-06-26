@@ -499,7 +499,7 @@ const DOCES = {
 };
 const LS_KEY  = 'dulcisnina_v1';
 const POLL_MS = 15000;
-const API_URL = 'https://script.google.com/macros/s/AKfycbySuqn2yjexjF0uxkZXj8lUqm--gytUjfkCCixnL98HcmfpqhI1lQwwCUGkuTHeQEMaMg/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbwGPFwBI8Nv029pa80ujnQCXoiyr2g71TSmKomDgHmyngJ6eoRpj5mYSXxWzRZHNL8U4g/exec';
 
 // ════════════════════════════════════════════════════
 //  ESTADO
@@ -608,22 +608,33 @@ async function togglePagamento(id) {
   setSyncStatus('syncing', 'Salvando…');
 
   try {
-    const venda = { ...state.vendas[idx] };
-    // Deleta linha antiga
-    await apiCall({ action:'delete_venda', id: String(id) });
-    // Recria com pago atualizado — JSON direto, sem encodeURIComponent
-    const url = API_URL + '?action=add_venda&venda=' + encodeURIComponent(JSON.stringify(venda));
-    const ctrl = new AbortController();
-    const t = setTimeout(() => ctrl.abort(), 10000);
-    const res = await fetch(url, { signal: ctrl.signal });
-    clearTimeout(t);
-    const data = await res.json();
-    if (!data.ok) throw new Error(data.error || 'Erro ao salvar');
-    setSyncStatus('ok', 'Pago atualizado no Sheets ✓');
+    // update_pago: atualiza só a célula na planilha, sem delete/recriar
+    const data = await apiCall({
+      action: 'update_pago',
+      id:     String(id),
+      pago:   novoStatus ? '1' : '0'
+    });
+    setSyncStatus('ok', 'Pago atualizado ✓');
   } catch(e) {
-    setSyncStatus('error', 'Erro: ' + String(e.message).slice(0,40));
+    // Se update falhar, tenta upsert completo como fallback
+    try {
+      const venda = { ...state.vendas[idx] };
+      const url = API_URL + '?action=add_venda&venda=' + encodeURIComponent(JSON.stringify(venda));
+      const ctrl = new AbortController();
+      const t = setTimeout(() => ctrl.abort(), 10000);
+      const res = await fetch(url, { signal: ctrl.signal });
+      clearTimeout(t);
+      const data2 = await res.json();
+      if (data2.ok) {
+        setSyncStatus('ok', 'Pago salvo (fallback) ✓');
+      } else {
+        throw new Error(data2.error);
+      }
+    } catch(e2) {
+      setSyncStatus('error', 'Erro: ' + String(e2.message).slice(0,35));
+    }
   } finally {
-    setTimeout(() => { operacaoPendente = false; }, 3000);
+    setTimeout(() => { operacaoPendente = false; }, 4000);
   }
 }
 function setSyncStatus(status, msg) {
