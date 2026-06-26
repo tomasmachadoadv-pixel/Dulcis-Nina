@@ -252,14 +252,25 @@ header p { font-size: 0.72rem; font-weight: 600; letter-spacing: 0.15em; text-tr
 .vendas-table tr:last-child td { border-bottom: none; }
 .badge-pacoca { display: inline-block; background: var(--gold-bg); color: var(--gold); font-size: 0.67rem; font-weight: 700; border-radius: 8px; padding: 3px 7px; border: 1px solid var(--gold-pale); }
 .badge-romeu  { display: inline-block; background: var(--rose-pale); color: var(--rose); font-size: 0.67rem; font-weight: 700; border-radius: 8px; padding: 3px 7px; border: 1px solid #E8C4C8; }
+.badge-pago      { display: inline-block; background: #EAF4E4; color: #5A7A3A; font-size: 0.65rem; font-weight: 700; border-radius: 8px; padding: 3px 7px; border: 1px solid #C2DEB8; white-space: nowrap; }
+.badge-pendente  { display: inline-block; background: #FEF3E8; color: #B5832A; font-size: 0.65rem; font-weight: 700; border-radius: 8px; padding: 3px 7px; border: 1px solid var(--gold-pale); white-space: nowrap; }
 .btn-del {
   background: none; border: none; color: #C0A880; font-size: 1rem;
-  min-width: 44px; min-height: 44px; cursor: pointer; padding: 0;
+  min-width: 40px; min-height: 44px; cursor: pointer; padding: 0;
   display: flex; align-items: center; justify-content: center;
   -webkit-tap-highlight-color: transparent; touch-action: manipulation;
   user-select: none; -webkit-user-select: none;
 }
 .btn-del:active { color: var(--rose); }
+.btn-toggle-pag {
+  background: none; border: 1.5px solid var(--border); border-radius: 8px;
+  color: var(--muted); font-size: 0.85rem; font-weight: 700;
+  min-width: 36px; min-height: 36px; cursor: pointer; padding: 0 6px;
+  display: flex; align-items: center; justify-content: center;
+  -webkit-tap-highlight-color: transparent; touch-action: manipulation;
+  user-select: none; -webkit-user-select: none;
+}
+.btn-toggle-pag:active { background: var(--gold-bg); }
 
 /* ── GRÁFICOS ── */
 .chart-wrap { position: relative; width: 100%; }
@@ -360,6 +371,8 @@ header p { font-size: 0.72rem; font-weight: 600; letter-spacing: 0.15em; text-tr
   <div class="kpi-card"><span class="kpi-icon">🍬</span><div class="kpi-value" id="kpiUnidades">0</div><div class="kpi-label">Unidades vendidas</div></div>
   <div class="kpi-card"><span class="kpi-icon">🗓️</span><div class="kpi-value" id="kpiHoje">R$ 0</div><div class="kpi-label">Lucro hoje</div></div>
   <div class="kpi-card"><span class="kpi-icon">📅</span><div class="kpi-value" id="kpiSemana">R$ 0</div><div class="kpi-label">Lucro 7 dias</div></div>
+  <div class="kpi-card"><span class="kpi-icon">⏳</span><div class="kpi-value" id="kpiPendentes">0</div><div class="kpi-label">Vendas pendentes</div></div>
+  <div class="kpi-card"><span class="kpi-icon">💸</span><div class="kpi-value" id="kpiVlPendente">R$ 0</div><div class="kpi-label">Valor a receber</div></div>
 </div>
 
 <div class="card">
@@ -724,10 +737,14 @@ function renderKPIs() {
   const v    = state.vendas;
   const hoje = todayStr();
   const d7   = dateAdd(hoje,-7);
-  document.getElementById('kpiVendas').textContent   = v.length;
-  document.getElementById('kpiUnidades').textContent = v.reduce((s,x)=>s+x.qtd,0);
-  document.getElementById('kpiHoje').textContent     = fmtBRL(v.filter(x=>x.data===hoje).reduce((s,x)=>s+x.meta,0));
-  document.getElementById('kpiSemana').textContent   = fmtBRL(v.filter(x=>x.data>d7).reduce((s,x)=>s+x.meta,0));
+  const pendentes = v.filter(x => !x.pago);
+  const vlPendente = pendentes.reduce((s,x)=>s+x.total,0);
+  document.getElementById('kpiVendas').textContent    = v.length;
+  document.getElementById('kpiUnidades').textContent  = v.reduce((s,x)=>s+x.qtd,0);
+  document.getElementById('kpiHoje').textContent      = fmtBRL(v.filter(x=>x.data===hoje).reduce((s,x)=>s+x.meta,0));
+  document.getElementById('kpiSemana').textContent    = fmtBRL(v.filter(x=>x.data>d7).reduce((s,x)=>s+x.meta,0));
+  document.getElementById('kpiPendentes').textContent = pendentes.length;
+  document.getElementById('kpiVlPendente').textContent= fmtBRL(vlPendente);
 }
 
 function renderCaixinhas() {
@@ -748,51 +765,98 @@ function renderTabela() {
     return;
   }
   const rows = state.vendas.map(v => {
-    const d = DOCES[v.tipo];
-    const dt = v.data ? v.data.split('-').reverse().join('/') : '—';
+    const d    = DOCES[v.tipo];
+    const dt   = v.data ? normDate(v.data).split('-').reverse().join('/') : '—';
+    const pago = !!v.pago;
+    const badgePag = pago
+      ? '<span class="badge-pago">✓ Pago</span>'
+      : '<span class="badge-pendente">⏳ Pendente</span>';
     return '<tr>'
       + '<td style="white-space:nowrap">'+dt+'</td>'
       + '<td><span class="'+d.badge+'">'+d.emoji+' '+d.nome.split(' ')[0]+'</span></td>'
       + '<td style="text-align:center;font-weight:700">'+v.qtd+'</td>'
       + '<td style="white-space:nowrap">'+fmtBRL(v.total)+'</td>'
+      + '<td>'+badgePag+'</td>'
+      + '<td><button class="btn-toggle-pag" data-id="'+v.id+'" data-pago="'+(pago?'1':'0')+'" type="button" title="Alternar pagamento">'+( pago ? '↩' : '✓' )+'</button></td>'
       + '<td><button class="btn-del" data-id="'+v.id+'" type="button">✕</button></td>'
       + '</tr>';
   }).join('');
-  wrap.innerHTML = '<table class="vendas-table"><thead><tr><th>Data</th><th>Doce</th><th style="text-align:center">Qtd</th><th>Total</th><th></th></tr></thead><tbody>'+rows+'</tbody></table>';
+  wrap.innerHTML = '<table class="vendas-table"><thead><tr>'
+    + '<th>Data</th><th>Doce</th><th style="text-align:center">Qtd</th>'
+    + '<th>Total</th><th>Status</th><th></th><th></th>'
+    + '</tr></thead><tbody>'+rows+'</tbody></table>';
+
   wrap.querySelectorAll('.btn-del').forEach(btn => {
     onTap(btn, () => removerVenda(Number(btn.dataset.id)));
   });
+  wrap.querySelectorAll('.btn-toggle-pag').forEach(btn => {
+    onTap(btn, () => togglePagamento(Number(btn.dataset.id)));
+  });
+}
+
+// ════════════════════════════════════════════════════
+//  PAGAMENTO
+// ════════════════════════════════════════════════════
+async function togglePagamento(id) {
+  const idx = state.vendas.findIndex(v => v.id === id);
+  if (idx < 0) return;
+  state.vendas[idx].pago = !state.vendas[idx].pago;
+  cacheSave();
+  renderAll();
+  const status = state.vendas[idx].pago ? 'Marcado como pago ✓' : 'Marcado como pendente';
+  showToast(status);
+  setSyncStatus('syncing','Atualizando…');
+  try {
+    await apiCall({ action:'update_pago', id, pago: state.vendas[idx].pago ? '1':'0' });
+    setSyncStatus('ok','Atualizado no Sheets ✓');
+  } catch(e) {
+    setSyncStatus('error','Erro: '+String(e.message).slice(0,35));
+  }
 }
 
 // ════════════════════════════════════════════════════
 //  GRÁFICOS
 // ════════════════════════════════════════════════════
+// Normaliza datas que chegam do Sheets com hora ou espaços
+function normDate(s) {
+  if (!s) return '';
+  const str = String(s).trim();
+  // Se vier como "2025-06-01 00:00:00" ou "2025-06-01T00:00:00"
+  return str.split(/[ T]/)[0];
+}
+
 function renderGraficos() {
   const v          = state.vendas;
   const qtdP       = v.filter(x=>x.tipo==='pacoca').reduce((s,x)=>s+x.qtd,0);
   const qtdR       = v.filter(x=>x.tipo==='romeu').reduce((s,x)=>s+x.qtd,0);
-  const diasU      = [...new Set(v.map(x=>x.data))];
+
+  // Monta lucro por dia com datas normalizadas
+  const lpd = {};
+  v.forEach(x => {
+    const dia = normDate(x.data);
+    if (dia) lpd[dia] = (lpd[dia]||0) + x.meta;
+  });
+
+  const diasU      = Object.keys(lpd);
   const totalLucro = v.reduce((s,x)=>s+x.meta,0);
   const media      = diasU.length > 0 ? totalLucro/diasU.length : 0;
-  const lpd        = {};
-  v.forEach(x => { lpd[x.data] = (lpd[x.data]||0) + x.meta; });
-  const melhor = Object.entries(lpd).sort((a,b)=>b[1]-a[1])[0];
+  const melhor     = Object.entries(lpd).sort((a,b)=>b[1]-a[1])[0];
 
   document.getElementById('kpiQtdPacoca').textContent = qtdP;
   document.getElementById('kpiQtdRomeu').textContent  = qtdR;
   document.getElementById('kpiMediaDia').textContent  = fmtBRL(media);
-  document.getElementById('kpiMelhorDia').textContent = melhor ? fmtShort(melhor[0]) : '—';
+  document.getElementById('kpiMelhorDia').textContent = melhor
+    ? fmtShort(melhor[0]) + ' (' + fmtBRL(melhor[1]) + ')'
+    : '—';
 
   renderProjecao(totalLucro, media);
 
   // Evolução acumulada
-  const acumPD = {};
-  v.forEach(x => { acumPD[x.data] = (acumPD[x.data]||0) + x.meta; });
-  const datas = Object.keys(acumPD).sort();
+  const datas = Object.keys(lpd).sort();
   let r = 0;
   const eLabels=[], eData=[], eMeta=[];
   datas.forEach(d => {
-    r += acumPD[d];
+    r += lpd[d];
     eLabels.push(fmtShort(d));
     eData.push(+r.toFixed(2));
     eMeta.push(state.meta||null);
@@ -807,7 +871,7 @@ function renderGraficos() {
     options: chartOpts(true)
   });
 
-  // Barras por dia
+  // Barras últimos 14 dias — com datas normalizadas
   const hoje = todayStr();
   const d14  = [];
   for (let i=13;i>=0;i--) d14.push(dateAdd(hoje,-i));
@@ -816,7 +880,9 @@ function renderGraficos() {
   chartDias = new Chart(document.getElementById('chartDias'), {
     type: 'bar',
     data: { labels: d14.map(fmtShort), datasets: [
-      { label:'Lucro (R$)', data:l14, backgroundColor:l14.map(x=>x>0?'rgba(181,131,42,0.82)':'rgba(181,131,42,0.13)'), borderRadius:6, borderSkipped:false }
+      { label:'Lucro (R$)', data:l14,
+        backgroundColor: l14.map(x=>x>0?'rgba(181,131,42,0.82)':'rgba(181,131,42,0.13)'),
+        borderRadius:6, borderSkipped:false }
     ]},
     options: chartOpts(false)
   });
