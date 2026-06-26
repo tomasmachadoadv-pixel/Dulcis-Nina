@@ -528,10 +528,20 @@ function cacheSave() {
 // ════════════════════════════════════════════════════
 async function apiCall(params) {
   const url = API_URL + '?' + new URLSearchParams(params).toString();
-  const res  = await fetch(url);
-  const data = await res.json();
-  if (!data.ok) throw new Error(data.error || 'Erro');
-  return data;
+  // timeout de 10s — evita travar indefinidamente
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 10000);
+  try {
+    const res  = await fetch(url, { signal: controller.signal });
+    clearTimeout(timer);
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error || 'Erro');
+    return data;
+  } catch(e) {
+    clearTimeout(timer);
+    if (e.name === 'AbortError') throw new Error('Tempo esgotado — verifique a conexão');
+    throw e;
+  }
 }
 
 async function syncFromSheets(showMsg) {
@@ -994,17 +1004,44 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('fData').value = todayStr();
   document.getElementById('btnRegistrar').disabled = true;
 
-  // 1. Mostra cache local enquanto carrega (evita tela em branco)
+  // Mostra cache local imediatamente (tela não fica em branco)
   cacheLoad();
   renderAll();
   if (state.meta > 0) document.getElementById('cfgMeta').value = state.meta;
 
-  // 2. Busca dados frescos do Sheets (fonte de verdade)
+  // Busca Sheets — fonte de verdade
   setSyncStatus('syncing', 'Carregando…');
   try {
     const data = await apiCall({ action:'get_all' });
-    const temDadosNoSheets = (data.vendas||[]).length > 0 || data.meta > 0;
 
-    if (temDadosNoSheets) {
-      // Sheets tem dados — usa direto, ignora cache local
-      state.meta   = data
+    if ((data.vendas||[]).length > 0 || data.meta > 0) {
+      // Sheets tem dados → usa direto, nunca sobrescreve com cache
+      state.meta   = data.meta   || 0;
+      state.vendas = data.vendas || [];
+      cacheSave();
+      renderAll();
+      if (state.meta > 0) document.getElementById('cfgMeta').value = state.meta;
+      setSyncStatus('ok', state.vendas.length + ' venda(s) carregada(s)');
+    } else {
+      // Sheets vazio → migra cache local em segundo plano (não bloqueia)
+      setSyncStatus('ok', 'Pronto para registrar');
+      const raw = localStorage.getItem(LS_KEY) || localStorage.getItem('docinhometa_v2');
+      const local = raw ? JSON.parse(raw) : null;
+      if (local && (local.vendas||[]).length > 0) {
+        migrarCacheParaSheets().then(qtd => {
+          if (qtd > 0) {
+            showToast('✅ ' + qtd + ' venda(s) enviadas para o Sheets!');
+            syncFromSheets(false);
+          }
+        }).catch(() => {});
+      }
+    }
+  } catch(e) {
+    setSyncStatus('error', 'Sem conexão — usando dados locais');
+  }
+
+  startPolling();
+});
+</script>
+</body>
+</html>
