@@ -129,9 +129,18 @@ header p { font-size: 0.72rem; font-weight: 600; letter-spacing: 0.15em; text-tr
 /* ── KPIs ── */
 .kpis { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
 .kpi-card { background: var(--white); border: 1px solid var(--border); border-radius: 16px; padding: 14px 13px 12px; box-shadow: 0 1px 8px rgba(58,32,16,.06); }
+.kpi-card.kpi-destaque-green { background: #EAF4E4; border-color: #C2DEB8; }
+.kpi-card.kpi-destaque-gold  { background: var(--gold-bg); border-color: var(--gold-pale); }
 .kpi-icon { font-size: 1.2rem; margin-bottom: 5px; display: block; }
 .kpi-value { font-family: 'Comfortaa', cursive; font-size: 1.4rem; font-weight: 700; color: var(--brown); line-height: 1; margin-bottom: 3px; }
+.kpi-card.kpi-destaque-green .kpi-value { color: #3A5C28; }
+.kpi-card.kpi-destaque-gold  .kpi-value { color: var(--gold); }
 .kpi-label { font-size: 0.67rem; font-weight: 700; color: var(--muted); }
+.meta-pendente-row {
+  margin-top: 8px; text-align: center;
+  font-size: 0.74rem; font-weight: 700;
+  color: var(--gold-lt); opacity: 0.85;
+}
 
 /* ── CAIXINHAS ── */
 .caixinhas-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
@@ -271,6 +280,7 @@ header p { font-size: 0.72rem; font-weight: 600; letter-spacing: 0.15em; text-tr
   user-select: none; -webkit-user-select: none;
 }
 .btn-toggle-pag:active { background: var(--gold-bg); }
+.hist-obs { font-size: 0.68rem; font-weight: 700; color: var(--muted); margin-top: 3px; }
 
 /* ── GRÁFICOS ── */
 .chart-wrap { position: relative; width: 100%; }
@@ -350,7 +360,7 @@ header p { font-size: 0.72rem; font-weight: 600; letter-spacing: 0.15em; text-tr
   <div class="meta-tablet-name">🖥️ Tablet</div>
   <div class="meta-values">
     <div class="meta-current">
-      <span>Lucro acumulado</span>
+      <span>Lucro recebido</span>
       <strong id="totalArrecadado">R$ 0,00</strong>
     </div>
     <div class="meta-goal">
@@ -364,15 +374,20 @@ header p { font-size: 0.72rem; font-weight: 600; letter-spacing: 0.15em; text-tr
     <span>Ainda faltam</span>
     <strong id="faltaValor">—</strong>
   </div>
+  <div class="meta-pendente-row" id="metaPendenteRow" style="display:none">
+    <span id="metaPendenteLabel">+ R$ 0,00 aguardando recebimento</span>
+  </div>
 </div>
 
 <div class="kpis">
+  <div class="kpi-card kpi-destaque-green"><span class="kpi-icon">✅</span><div class="kpi-value" id="kpiRecebido">R$ 0</div><div class="kpi-label">Total recebido</div></div>
+  <div class="kpi-card kpi-destaque-gold"><span class="kpi-icon">⏳</span><div class="kpi-value" id="kpiVlPendente">R$ 0</div><div class="kpi-label">A receber</div></div>
   <div class="kpi-card"><span class="kpi-icon">📦</span><div class="kpi-value" id="kpiVendas">0</div><div class="kpi-label">Registros</div></div>
   <div class="kpi-card"><span class="kpi-icon">🍬</span><div class="kpi-value" id="kpiUnidades">0</div><div class="kpi-label">Unidades vendidas</div></div>
-  <div class="kpi-card"><span class="kpi-icon">🗓️</span><div class="kpi-value" id="kpiHoje">R$ 0</div><div class="kpi-label">Lucro hoje</div></div>
-  <div class="kpi-card"><span class="kpi-icon">📅</span><div class="kpi-value" id="kpiSemana">R$ 0</div><div class="kpi-label">Lucro 7 dias</div></div>
-  <div class="kpi-card"><span class="kpi-icon">⏳</span><div class="kpi-value" id="kpiPendentes">0</div><div class="kpi-label">Vendas pendentes</div></div>
-  <div class="kpi-card"><span class="kpi-icon">💸</span><div class="kpi-value" id="kpiVlPendente">R$ 0</div><div class="kpi-label">Valor a receber</div></div>
+  <div class="kpi-card"><span class="kpi-icon">🗓️</span><div class="kpi-value" id="kpiHoje">R$ 0</div><div class="kpi-label">Recebido hoje</div></div>
+  <div class="kpi-card"><span class="kpi-icon">📅</span><div class="kpi-value" id="kpiSemana">R$ 0</div><div class="kpi-label">Recebido 7 dias</div></div>
+  <div class="kpi-card"><span class="kpi-icon">⚠️</span><div class="kpi-value" id="kpiPendentes">0</div><div class="kpi-label">Vendas pendentes</div></div>
+  <div class="kpi-card"><span class="kpi-icon">💰</span><div class="kpi-value" id="kpiLucroTotal">R$ 0</div><div class="kpi-label">Lucro total (pago)</div></div>
 </div>
 
 <div class="card">
@@ -419,8 +434,8 @@ header p { font-size: 0.72rem; font-weight: 600; letter-spacing: 0.15em; text-tr
       <input class="form-input" type="date" id="fData">
     </div>
     <div class="form-group" style="margin-bottom:8px">
-      <div class="form-label">Observação (opcional)</div>
-      <input class="form-input" type="text" id="fObs" placeholder="ex: Encomenda da Maria">
+      <div class="form-label">👤 Nome da cliente</div>
+      <input class="form-input" type="text" id="fObs" placeholder="ex: Maria, Ana Lima…" autocomplete="off">
     </div>
     <button class="btn-add" id="btnRegistrar" type="button">🌹 Registrar venda</button>
   </div>
@@ -720,31 +735,55 @@ function renderAll() {
 }
 
 function renderMeta() {
-  const lucro = state.vendas.reduce((s,v) => s+v.meta, 0);
-  const meta  = state.meta || 0;
-  const pct   = meta > 0 ? Math.min(100,(lucro/meta)*100) : 0;
-  document.getElementById('totalArrecadado').textContent = fmtBRL(lucro);
+  const pagas     = state.vendas.filter(v => v.pago);
+  const pendentes = state.vendas.filter(v => !v.pago);
+  const lucroRecebido  = pagas.reduce((s,v) => s+v.meta, 0);
+  const lucroPendente  = pendentes.reduce((s,v) => s+v.meta, 0);
+  const meta = state.meta || 0;
+  const pct  = meta > 0 ? Math.min(100,(lucroRecebido/meta)*100) : 0;
+
+  document.getElementById('totalArrecadado').textContent = fmtBRL(lucroRecebido);
   document.getElementById('metaValor').textContent       = meta > 0 ? fmtBRL(meta) : '—';
   document.getElementById('progressFill').style.width    = pct.toFixed(1)+'%';
   document.getElementById('progressPct').innerHTML       = '<strong>'+pct.toFixed(0)+'%</strong> concluído';
-  document.getElementById('faltaValor').textContent      = meta > 0 ? fmtBRL(Math.max(0,meta-lucro)) : '— (defina a meta)';
-  document.getElementById('goalBanner').classList.toggle('show', meta > 0 && lucro >= meta);
+  document.getElementById('faltaValor').textContent      = meta > 0 ? fmtBRL(Math.max(0,meta-lucroRecebido)) : '— (defina a meta)';
+  document.getElementById('goalBanner').classList.toggle('show', meta > 0 && lucroRecebido >= meta);
+
+  // linha de pendente no card da meta
+  const pendenteRow = document.getElementById('metaPendenteRow');
+  if (lucroPendente > 0) {
+    pendenteRow.style.display = 'block';
+    document.getElementById('metaPendenteLabel').textContent =
+      '+ ' + fmtBRL(lucroPendente) + ' aguardando recebimento';
+  } else {
+    pendenteRow.style.display = 'none';
+  }
+
   const cfgEl = document.getElementById('cfgMeta');
   if (!cfgEl.value && meta > 0) cfgEl.value = meta;
 }
 
 function renderKPIs() {
-  const v    = state.vendas;
-  const hoje = todayStr();
-  const d7   = dateAdd(hoje,-7);
+  const v         = state.vendas;
+  const pagas     = v.filter(x => x.pago);
   const pendentes = v.filter(x => !x.pago);
-  const vlPendente = pendentes.reduce((s,x)=>s+x.total,0);
-  document.getElementById('kpiVendas').textContent    = v.length;
-  document.getElementById('kpiUnidades').textContent  = v.reduce((s,x)=>s+x.qtd,0);
-  document.getElementById('kpiHoje').textContent      = fmtBRL(v.filter(x=>x.data===hoje).reduce((s,x)=>s+x.meta,0));
-  document.getElementById('kpiSemana').textContent    = fmtBRL(v.filter(x=>x.data>d7).reduce((s,x)=>s+x.meta,0));
-  document.getElementById('kpiPendentes').textContent = pendentes.length;
-  document.getElementById('kpiVlPendente').textContent= fmtBRL(vlPendente);
+  const hoje      = todayStr();
+  const d7        = dateAdd(hoje,-7);
+
+  const totalRecebido  = pagas.reduce((s,x)=>s+x.total, 0);
+  const totalPendente  = pendentes.reduce((s,x)=>s+x.total, 0);
+  const lucroTotal     = pagas.reduce((s,x)=>s+x.meta, 0);
+  const recebidoHoje   = pagas.filter(x=>normDate(x.data)===hoje).reduce((s,x)=>s+x.total,0);
+  const recebidoSemana = pagas.filter(x=>normDate(x.data)>d7).reduce((s,x)=>s+x.total,0);
+
+  document.getElementById('kpiRecebido').textContent    = fmtBRL(totalRecebido);
+  document.getElementById('kpiVlPendente').textContent  = fmtBRL(totalPendente);
+  document.getElementById('kpiVendas').textContent      = v.length;
+  document.getElementById('kpiUnidades').textContent    = v.reduce((s,x)=>s+x.qtd,0);
+  document.getElementById('kpiHoje').textContent        = fmtBRL(recebidoHoje);
+  document.getElementById('kpiSemana').textContent      = fmtBRL(recebidoSemana);
+  document.getElementById('kpiPendentes').textContent   = pendentes.length;
+  document.getElementById('kpiLucroTotal').textContent  = fmtBRL(lucroTotal);
 }
 
 function renderCaixinhas() {
@@ -771,9 +810,10 @@ function renderTabela() {
     const badgePag = pago
       ? '<span class="badge-pago">✓ Pago</span>'
       : '<span class="badge-pendente">⏳ Pendente</span>';
+    const obs = v.obs ? '<div class="hist-obs">👤 '+v.obs+'</div>' : '';
     return '<tr>'
       + '<td style="white-space:nowrap">'+dt+'</td>'
-      + '<td><span class="'+d.badge+'">'+d.emoji+' '+d.nome.split(' ')[0]+'</span></td>'
+      + '<td><span class="'+d.badge+'">'+d.emoji+' '+d.nome.split(' ')[0]+'</span>'+obs+'</td>'
       + '<td style="text-align:center;font-weight:700">'+v.qtd+'</td>'
       + '<td style="white-space:nowrap">'+fmtBRL(v.total)+'</td>'
       + '<td>'+badgePag+'</td>'
@@ -782,7 +822,7 @@ function renderTabela() {
       + '</tr>';
   }).join('');
   wrap.innerHTML = '<table class="vendas-table"><thead><tr>'
-    + '<th>Data</th><th>Doce</th><th style="text-align:center">Qtd</th>'
+    + '<th>Data</th><th>Doce / Cliente</th><th style="text-align:center">Qtd</th>'
     + '<th>Total</th><th>Status</th><th></th><th></th>'
     + '</tr></thead><tbody>'+rows+'</tbody></table>';
 
