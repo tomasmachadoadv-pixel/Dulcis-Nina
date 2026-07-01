@@ -377,11 +377,24 @@ select.form-input{cursor:pointer}
 </div>
 
 <div class="card">
-  <div class="ct-orn"><div class="ct-line"></div><div class="ct-text">Caixinhas</div><div class="ct-line"></div></div>
+  <div class="ct-orn"><div class="ct-line"></div><div class="ct-text">Caixinhas · 45% / 5% / 50%</div><div class="ct-line"></div></div>
   <div class="caixinhas-grid">
-    <div class="caixa giro"><span class="caixa-icon">🔄</span><div class="caixa-nome">Giro<br>Matéria-prima</div><div class="caixa-valor" id="cxGiro">R$ 0,00</div><div class="caixa-sub" id="cxGiroSub">0 pedidos</div></div>
-    <div class="caixa reserva"><span class="caixa-icon">⛽</span><div class="caixa-nome">Reserva<br>Custo Fixo</div><div class="caixa-valor" id="cxReserva">R$ 0,00</div><div class="caixa-sub" id="cxReservaSub">0 pedidos</div></div>
-    <div class="caixa meta"><span class="caixa-icon">🖥️</span><div class="caixa-nome">Meta<br>Tablet</div><div class="caixa-valor" id="cxMeta">R$ 0,00</div><div class="caixa-sub" id="cxMetaSub">0 pedidos</div></div>
+    <div class="caixa giro"><span class="caixa-icon">🔄</span><div class="caixa-nome">Giro 45%<br>Matéria-prima</div><div class="caixa-valor" id="cxGiro">R$ 0,00</div><div class="caixa-sub" id="cxGiroSub">0 pedidos</div></div>
+    <div class="caixa reserva"><span class="caixa-icon">⛽</span><div class="caixa-nome">Reserva 5%<br>Custo Fixo</div><div class="caixa-valor" id="cxReserva">R$ 0,00</div><div class="caixa-sub" id="cxReservaSub">0 pedidos</div></div>
+    <div class="caixa meta"><span class="caixa-icon">🖥️</span><div class="caixa-nome">Meta 50%<br>Tablet</div><div class="caixa-valor" id="cxMeta">R$ 0,00</div><div class="caixa-sub" id="cxMetaSub">0 pedidos</div></div>
+  </div>
+</div>
+
+<!-- TRANSFERÊNCIA DO DIA -->
+<div class="card" id="transferenciaCard" style="display:none">
+  <div class="ct-orn"><div class="ct-line"></div><div class="ct-text">💸 Transferência de hoje</div><div class="ct-line"></div></div>
+  <div style="font-size:.72rem;font-weight:700;color:var(--muted);margin-bottom:10px;text-align:center">
+    Total recebido hoje: <span id="transfTotal" style="color:var(--text);font-size:.9rem"></span>
+  </div>
+  <div class="caixinhas-grid">
+    <div class="caixa giro"><span class="caixa-icon">🔄</span><div class="caixa-nome">Giro 45%</div><div class="caixa-valor" id="transfGiro">R$ 0,00</div></div>
+    <div class="caixa reserva"><span class="caixa-icon">⛽</span><div class="caixa-nome">Reserva 5%</div><div class="caixa-valor" id="transfReserva">R$ 0,00</div></div>
+    <div class="caixa meta"><span class="caixa-icon">🖥️</span><div class="caixa-nome">Meta 50%</div><div class="caixa-valor" id="transfMeta">R$ 0,00</div></div>
   </div>
 </div>
 
@@ -563,12 +576,24 @@ select.form-input{cursor:pointer}
 //  CATÁLOGO DE DOCES
 // ═══════════════════════════════════════════════════
 const DOCES = {
-  pacoca:          { nome:'Paçoca de Colher',       emoji:'🥜', preco:7.50,   giro:2.35, reserva:0.75, meta:4.40,  travessa:false },
-  romeu:           { nome:'Romeu e Julieta',         emoji:'🧀', preco:7.50,   giro:3.09, reserva:0.75, meta:3.66,  travessa:false },
-  brigadeiro:      { nome:'Brigadeiro de Colher',    emoji:'🍫', preco:7.50,   giro:3.82, reserva:1.49, meta:2.19,  travessa:false },
-  travessa_pacoca: { nome:'Travessa Paçoca',         emoji:'🍽️', preco:150.00, giro:59.13,reserva:27.00,meta:48.87, travessa:true  },
-  travessa_romeu:  { nome:'Travessa Romeu e Julieta',emoji:'🍽️', preco:150.00, giro:56.46,reserva:16.48,meta:62.06, travessa:true  },
+  pacoca:          { nome:'Paçoca de Colher',        emoji:'🥜', preco:7.50,   travessa:false },
+  romeu:           { nome:'Romeu e Julieta',          emoji:'🧀', preco:7.50,   travessa:false },
+  brigadeiro:      { nome:'Brigadeiro de Colher',     emoji:'🍫', preco:7.50,   travessa:false },
+  travessa_pacoca: { nome:'Travessa Paçoca',          emoji:'🍽️', preco:150.00, travessa:true  },
+  travessa_romeu:  { nome:'Travessa Romeu e Julieta', emoji:'🍽️', preco:150.00, travessa:true  },
 };
+
+// Percentuais fixos de destinação — aplicados sobre o total recebido
+const PCTS = { giro:0.45, reserva:0.05, meta:0.50 };
+
+// Calcula destinação a partir do valor total recebido
+function calcDestinacao(total) {
+  return {
+    giro:    +(total * PCTS.giro).toFixed(2),
+    reserva: +(total * PCTS.reserva).toFixed(2),
+    meta:    +(total * PCTS.meta).toFixed(2),
+  };
+}
 
 const API_URL = 'https://script.google.com/macros/s/AKfycbxNFVLmO-LlEfxFVElZxkCdsSCJVirkWlt9Z_E6HIpSV8dEUquf5DRjfc8JRJrZjOBC-Q/exec';
 const LS_KEY  = 'dulcisnina_v1';
@@ -628,24 +653,19 @@ function migrarVendaParaPedido(v) {
 }
 
 // ═══════════════════════════════════════════════════
-//  CÁLCULO DE PEDIDO
+//  CÁLCULO DE PEDIDO — percentuais fixos 45/5/50
 // ═══════════════════════════════════════════════════
-function calcularPedido(itens, travessaPreco) {
-  let total=0, giro=0, reserva=0, meta=0;
+function calcularPedido(itens) {
+  // Total bruto: soma dos preços × qtd (com eventual desconto na travessa)
+  let total = 0;
   itens.forEach(item => {
-    const d = DOCES[item.tipo];
-    if (!d) return;
-    const preco = item.precoUnit !== undefined ? item.precoUnit : d.preco;
-    const precoBase = d.preco;
-    // desconto sai do lucro, giro e reserva fixos
-    const desconto = Math.max(0, precoBase - preco);
-    const metaItem = Math.max(0, d.meta - desconto);
-    total   += preco   * item.qtd;
-    giro    += d.giro  * item.qtd;
-    reserva += d.reserva * item.qtd;
-    meta    += metaItem  * item.qtd;
+    const d = DOCES[item.tipo]; if (!d) return;
+    const preco = (item.precoUnit !== undefined && item.precoUnit > 0) ? item.precoUnit : d.preco;
+    total += preco * (item.qtd || 1);
   });
-  return { total:+total.toFixed(2), giro:+giro.toFixed(2), reserva:+reserva.toFixed(2), meta:+meta.toFixed(2) };
+  total = +total.toFixed(2);
+  const dest = calcDestinacao(total);
+  return { total, giro: dest.giro, reserva: dest.reserva, meta: dest.meta };
 }
 
 // ═══════════════════════════════════════════════════
@@ -715,8 +735,26 @@ function setSyncStatus(s,m) { document.getElementById('syncDot').className='sync
 const fmtBRL = v => v.toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
 function todayStr() { const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
 function dateAdd(s,n) { const d=new Date(s+'T00:00:00'); d.setDate(d.getDate()+n); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
-function normDate(s) { return String(s||'').trim().split(/[ T]/)[0]; }
-function fmtShort(s) { const[,m,d]=s.split('-'); return d+'/'+m; }
+function normDate(s) {
+  const str = String(s||'').trim().split(/[ T]/)[0];
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(str)) { const [d,m,y]=str.split('/'); return y+'-'+m+'-'+d; }
+  if (/^\d{2}\/\d{2}\/\d{2}$/.test(str))  { const [d,m,y]=str.split('/'); return '20'+y+'-'+m+'-'+d; }
+  return str;
+}
+function fmtShort(s) {
+  const n=normDate(s); const parts=n.split('-');
+  if(parts.length===3) return parts[2]+'/'+parts[1];
+  return s;
+}
+function normItens(p) {
+  let itens = p.itens;
+  if (typeof itens === 'string') { try { itens = JSON.parse(itens); } catch(_){ itens=[]; } }
+  if (!Array.isArray(itens) || !itens.length) {
+    if (p.tipo) return [{ tipo:p.tipo, qtd:p.qtd||1, precoUnit:p.preco||7.5 }];
+    return [];
+  }
+  return itens;
+}
 function diasEntre(a,b) { return Math.round((new Date(b+'T00:00:00')-new Date(a+'T00:00:00'))/86400000); }
 function showToast(msg) { const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove('show'),2800); }
 function onTap(el,fn) {
@@ -808,7 +846,7 @@ function renderCarrinho() {
     return;
   }
   const itens = getItensPedido();
-  const calc = calcularPedido(itens, null);
+  const calc = calcularPedido(itens);
   total_el.textContent = fmtBRL(calc.total);
   wrap.innerHTML = itens.map(item => {
     const d = DOCES[item.tipo];
@@ -849,7 +887,7 @@ function renderEncCarrinho() {
     return;
   }
   const itens = Object.entries(encCarrinho).map(([tipo,qtd])=>({tipo,qtd,precoUnit:DOCES[tipo].preco}));
-  const calc = calcularPedido(itens, null);
+  const calc = calcularPedido(itens);
   total_el.textContent = fmtBRL(calc.total);
   wrap.innerHTML = itens.map(item => {
     const d = DOCES[item.tipo];
@@ -942,7 +980,7 @@ async function registrarPedido() {
   const cliente = document.getElementById('fCliente').value.trim();
   const obs     = document.getElementById('fObs').value.trim();
   const data    = document.getElementById('fData').value || todayStr();
-  const calc    = calcularPedido(itens, null);
+  const calc    = calcularPedido(itens);
   const pedido  = {
     id:      Date.now(),
     num:     pedidoNumSeq++,
@@ -1027,7 +1065,7 @@ async function salvarEncomenda() {
   const data=document.getElementById('encData').value;
   if(!cliente){showToast('Informe o nome da cliente');return;}
   if(!data){showToast('Informe a data de entrega');return;}
-  const calc=calcularPedido(itens,null);
+  const calc=calcularPedido(itens);
   const enc={ id:Date.now(), num:pedidoNumSeq, cliente, obs, data, itens, total:calc.total, convertida:false };
   state.encomendas.unshift(enc); cacheSave();
   encCarrinho={};
@@ -1083,7 +1121,7 @@ function exportarCSV() {
   const pedidos=state.pedidos.filter(p=>normDate(p.data)>=de);
   const linhas=[['Pedido','Data','Cliente','Itens','Total','Giro','Reserva','Lucro','Pago','Obs']];
   pedidos.forEach(p=>{
-    const itensStr=(p.itens||[]).map(i=>DOCES[i.tipo]?.nome+' x'+i.qtd).join(' + ');
+    const itensStr=normItens(p).map(i=>DOCES[i.tipo]?.nome+' x'+(i.qtd||1)).join(' + ');
     linhas.push([p.num||'',normDate(p.data),p.cliente||'',itensStr,p.total.toFixed(2),
       p.giro.toFixed(2),p.reserva.toFixed(2),p.meta.toFixed(2),p.pago?'Sim':'Não',p.obs||'']);
   });
@@ -1105,21 +1143,33 @@ function renderAll() {
 }
 
 function renderMeta() {
-  const pagas=state.pedidos.filter(p=>p.pago);
-  const pends=state.pedidos.filter(p=>!p.pago);
-  const lr=pagas.reduce((s,p)=>s+p.meta,0);
-  const lp=pends.reduce((s,p)=>s+p.meta,0);
-  const meta=state.meta||0; const pct=meta>0?Math.min(100,(lr/meta)*100):0;
-  document.getElementById('totalArrecadado').textContent=fmtBRL(lr);
-  document.getElementById('metaValor').textContent=meta>0?fmtBRL(meta):'—';
-  document.getElementById('progressFill').style.width=pct.toFixed(1)+'%';
-  document.getElementById('progressPct').innerHTML='<strong>'+pct.toFixed(0)+'%</strong> concluído';
-  document.getElementById('faltaValor').textContent=meta>0?fmtBRL(Math.max(0,meta-lr)):'— (defina a meta)';
-  document.getElementById('goalBanner').classList.toggle('show',meta>0&&lr>=meta);
-  const pr=document.getElementById('metaPendenteRow');
-  if(lp>0){pr.style.display='block';document.getElementById('metaPendenteLabel').textContent='+ '+fmtBRL(lp)+' aguardando recebimento';}
-  else{pr.style.display='none';}
-  const cfg=document.getElementById('cfgMeta'); if(!cfg.value&&meta>0) cfg.value=meta;
+  const pagas = state.pedidos.filter(p => p.pago);
+  const pends  = state.pedidos.filter(p => !p.pago);
+  const totalPago    = pagas.reduce((s,p) => s + (parseFloat(p.total)||0), 0);
+  const totalPendente= pends.reduce((s,p)  => s + (parseFloat(p.total)||0), 0);
+  const destPago     = calcDestinacao(totalPago);
+  const destPendente = calcDestinacao(totalPendente);
+  const lucroRecebido = destPago.meta;
+  const lucroPendente = destPendente.meta;
+  const meta = state.meta || 0;
+  const pct  = meta > 0 ? Math.min(100, (lucroRecebido / meta) * 100) : 0;
+
+  document.getElementById('totalArrecadado').textContent = fmtBRL(lucroRecebido);
+  document.getElementById('metaValor').textContent       = meta > 0 ? fmtBRL(meta) : '—';
+  document.getElementById('progressFill').style.width    = pct.toFixed(1) + '%';
+  document.getElementById('progressPct').innerHTML       = '<strong>' + pct.toFixed(0) + '%</strong> concluído';
+  document.getElementById('faltaValor').textContent      = meta > 0 ? fmtBRL(Math.max(0, meta - lucroRecebido)) : '— (defina a meta)';
+  document.getElementById('goalBanner').classList.toggle('show', meta > 0 && lucroRecebido >= meta);
+
+  const pr = document.getElementById('metaPendenteRow');
+  if (lucroPendente > 0) {
+    pr.style.display = 'block';
+    document.getElementById('metaPendenteLabel').textContent = '+ ' + fmtBRL(lucroPendente) + ' aguardando recebimento';
+  } else {
+    pr.style.display = 'none';
+  }
+  const cfg = document.getElementById('cfgMeta');
+  if (!cfg.value && meta > 0) cfg.value = meta;
 }
 
 function renderMetaMensal() {
@@ -1128,7 +1178,7 @@ function renderMetaMensal() {
   card.style.display='block';
   const mes=todayStr().slice(0,7);
   const pagas=state.pedidos.filter(p=>p.pago&&normDate(p.data).slice(0,7)===mes);
-  const rec=pagas.reduce((s,p)=>s+p.total,0); const pct=Math.min(100,(rec/mm)*100);
+  const rec=pagas.reduce((s,p)=>s+(parseFloat(p.total)||0),0); const pct=Math.min(100,(rec/mm)*100);
   document.getElementById('mmVal').textContent=fmtBRL(mm);
   document.getElementById('mmFill').style.width=pct.toFixed(1)+'%';
   document.getElementById('mmRecebido').textContent='Recebido: '+fmtBRL(rec);
@@ -1136,27 +1186,58 @@ function renderMetaMensal() {
 }
 
 function renderKPIs() {
-  const p=state.pedidos; const pagas=p.filter(x=>x.pago); const pends=p.filter(x=>!x.pago);
-  const hoje=todayStr(); const d7=dateAdd(hoje,-7);
-  const totalUnid=p.reduce((s,x)=>(x.itens||[]).reduce((ss,i)=>ss+i.qtd,s),0);
-  document.getElementById('kpiRecebido').textContent=fmtBRL(pagas.reduce((s,x)=>s+x.total,0));
-  document.getElementById('kpiVlPendente').textContent=fmtBRL(pends.reduce((s,x)=>s+x.total,0));
-  document.getElementById('kpiVendas').textContent=p.length;
-  document.getElementById('kpiUnidades').textContent=totalUnid;
-  document.getElementById('kpiHoje').textContent=fmtBRL(pagas.filter(x=>normDate(x.data)===hoje).reduce((s,x)=>s+x.total,0));
-  document.getElementById('kpiSemana').textContent=fmtBRL(pagas.filter(x=>normDate(x.data)>d7).reduce((s,x)=>s+x.total,0));
-  document.getElementById('kpiPendentes').textContent=pends.length;
-  document.getElementById('kpiLucroTotal').textContent=fmtBRL(pagas.reduce((s,x)=>s+x.meta,0));
+  const p = state.pedidos;
+  const pagas = p.filter(x => x.pago);
+  const pends  = p.filter(x => !x.pago);
+  const hoje = todayStr();
+  const d7   = dateAdd(hoje, -7);
+
+  const totalUnid    = p.reduce((s,x) => s + normItens(x).reduce((ss,i) => ss + (i.qtd||1), 0), 0);
+  const totalRecebido= pagas.reduce((s,x) => s + (parseFloat(x.total)||0), 0);
+  const totalPendente= pends.reduce((s,x)  => s + (parseFloat(x.total)||0), 0);
+  const totalHoje    = pagas.filter(x => normDate(x.data) === hoje).reduce((s,x) => s + (parseFloat(x.total)||0), 0);
+  const totalSemana  = pagas.filter(x => normDate(x.data) > d7).reduce((s,x)    => s + (parseFloat(x.total)||0), 0);
+  const lucroTotal   = calcDestinacao(totalRecebido).meta;
+
+  document.getElementById('kpiRecebido').textContent    = fmtBRL(totalRecebido);
+  document.getElementById('kpiVlPendente').textContent  = fmtBRL(totalPendente);
+  document.getElementById('kpiVendas').textContent      = p.length;
+  document.getElementById('kpiUnidades').textContent    = totalUnid;
+  document.getElementById('kpiHoje').textContent        = fmtBRL(totalHoje);
+  document.getElementById('kpiSemana').textContent      = fmtBRL(totalSemana);
+  document.getElementById('kpiPendentes').textContent   = pends.length;
+  document.getElementById('kpiLucroTotal').textContent  = fmtBRL(lucroTotal);
 }
 
 function renderCaixinhas() {
-  const n=state.pedidos.length;
-  document.getElementById('cxGiro').textContent=fmtBRL(state.pedidos.reduce((s,p)=>s+p.giro,0));
-  document.getElementById('cxGiroSub').textContent=n+' pedido(s)';
-  document.getElementById('cxReserva').textContent=fmtBRL(state.pedidos.reduce((s,p)=>s+p.reserva,0));
-  document.getElementById('cxReservaSub').textContent=n+' pedido(s)';
-  document.getElementById('cxMeta').textContent=fmtBRL(state.pedidos.reduce((s,p)=>s+p.meta,0));
-  document.getElementById('cxMetaSub').textContent=n+' pedido(s)';
+  const p = state.pedidos;
+  const n = p.length;
+  const totalGeral = p.reduce((s,x) => s + (parseFloat(x.total)||0), 0);
+  const destGeral  = calcDestinacao(totalGeral);
+
+  document.getElementById('cxGiro').textContent    = fmtBRL(destGeral.giro);
+  document.getElementById('cxGiroSub').textContent = n + ' pedido(s)';
+  document.getElementById('cxReserva').textContent    = fmtBRL(destGeral.reserva);
+  document.getElementById('cxReservaSub').textContent = n + ' pedido(s)';
+  document.getElementById('cxMeta').textContent    = fmtBRL(destGeral.meta);
+  document.getElementById('cxMetaSub').textContent = n + ' pedido(s)';
+
+  // Transferência do dia — só pedidos PAGOS hoje
+  const hoje   = todayStr();
+  const pagosHoje = p.filter(x => x.pago && normDate(x.data) === hoje);
+  const totalHoje = pagosHoje.reduce((s,x) => s + (parseFloat(x.total)||0), 0);
+  const card   = document.getElementById('transferenciaCard');
+
+  if (totalHoje > 0) {
+    const destHoje = calcDestinacao(totalHoje);
+    card.style.display = 'block';
+    document.getElementById('transfTotal').textContent   = fmtBRL(totalHoje);
+    document.getElementById('transfGiro').textContent    = fmtBRL(destHoje.giro);
+    document.getElementById('transfReserva').textContent = fmtBRL(destHoje.reserva);
+    document.getElementById('transfMeta').textContent    = fmtBRL(destHoje.meta);
+  } else {
+    card.style.display = 'none';
+  }
 }
 
 function renderAlertas() {
@@ -1185,7 +1266,7 @@ function renderTabela() {
     const badge=pago?'<span class="badge-sm badge-pago">✓ Pago</span>'
       :dias>=DIAS_ALERTA?'<span class="badge-sm badge-atrasado">⚠️ '+dias+'d</span>'
       :'<span class="badge-sm badge-pendente">⏳ Pend.</span>';
-    const itensStr=(p.itens||[]).map(i=>{const d=DOCES[i.tipo];return(d?d.emoji:'?')+' ×'+i.qtd;}).join(' ');
+    const itensStr=normItens(p).map(i=>{const d=DOCES[i.tipo];return(d?d.emoji:'?')+' ×'+(i.qtd||1);}).join(' ');
     const clienteStr=p.cliente?'<div class="hist-obs">👤 '+p.cliente+'</div>':'';
     const obsStr=p.obs?'<div class="hist-obs">📝 '+p.obs+'</div>':'';
     return '<tr>'
@@ -1215,7 +1296,7 @@ function renderEncomendas() {
     const dias=diasEntre(hoje,e.data);
     const cls=dias<0?'urgente':dias<=2?'soon':'ok';
     const txt=dias<0?'Atrasada '+Math.abs(dias)+'d':dias===0?'Hoje!':dias===1?'Amanhã':'Em '+dias+' dias';
-    const itensStr=(e.itens||[]).map(i=>{const d=DOCES[i.tipo];return(d?d.emoji:'?')+' '+d?.nome+' ×'+i.qtd;}).join(', ');
+    const itensStr=normItens(e).map(i=>{const d=DOCES[i.tipo];return(d?d.emoji:'?')+' '+(d?.nome||i.tipo)+' ×'+(i.qtd||1);}).join(', ');
     return '<div class="encomenda-card'+(cls==='urgente'?' urgente':'')+'">'
       +'<div class="enc-header">'
       +'<div><div class="enc-num">#'+e.num+'</div><div class="enc-cliente">'+e.cliente+'</div></div>'
@@ -1238,8 +1319,8 @@ function renderFinanceiro() {
   state.pedidos.filter(p=>p.cliente).forEach(p=>{
     const n=p.cliente.trim(); if(!n) return;
     if(!map[n]) map[n]={nome:n,total:0,pedidos:0,unidades:0};
-    map[n].total+=p.total; map[n].pedidos++;
-    map[n].unidades+=(p.itens||[]).reduce((s,i)=>s+i.qtd,0);
+    map[n].total+=parseFloat(p.total)||0; map[n].pedidos++;
+    map[n].unidades+=normItens(p).reduce((s,i)=>s+(i.qtd||1),0);
   });
   const sorted=Object.values(map).sort((a,b)=>b.total-a.total).slice(0,10);
   const rankEl=document.getElementById('rankingList');
@@ -1270,52 +1351,110 @@ function renderFinanceiro() {
 
 // ─── Gráficos ─────────────────────────────────────
 function renderGraficos() {
-  const p=state.pedidos;
-  const contagem={}; const lpd={};
-  p.forEach(x=>{
-    const dia=normDate(x.data); if(dia) lpd[dia]=(lpd[dia]||0)+x.meta;
-    (x.itens||[]).forEach(i=>{ contagem[i.tipo]=(contagem[i.tipo]||0)+i.qtd; });
+  const p = state.pedidos;
+  const contagem = {};
+  const lpd = {};
+
+  p.forEach(x => {
+    // normaliza itens — pode vir como string JSON do Sheets
+    let itens = x.itens;
+    if (typeof itens === 'string') {
+      try { itens = JSON.parse(itens); } catch(_){ itens = []; }
+    }
+    if (!Array.isArray(itens) || !itens.length) {
+      // pedido sem itens (migração antiga) — tenta inferir pelo tipo legado
+      if (x.tipo) itens = [{ tipo: x.tipo, qtd: x.qtd||1, precoUnit: x.preco||7.5 }];
+      else itens = [];
+    }
+    itens.forEach(i => { if(i.tipo) contagem[i.tipo] = (contagem[i.tipo]||0) + (i.qtd||1); });
+
+    const dia = normDate(x.data);
+    if (dia && dia.length === 10) {
+      const dest = calcDestinacao(parseFloat(x.total)||0);
+      lpd[dia] = (lpd[dia]||0) + dest.meta;
+    }
   });
-  const diasU=Object.keys(lpd); const tL=p.reduce((s,x)=>s+x.meta,0);
-  const media=diasU.length>0?tL/diasU.length:0;
-  const melhor=Object.entries(lpd).sort((a,b)=>b[1]-a[1])[0];
-  document.getElementById('kpiQtdPacoca').textContent=contagem.pacoca||0;
-  document.getElementById('kpiQtdRomeu').textContent=contagem.romeu||0;
-  document.getElementById('kpiQtdBrigadeiro').textContent=contagem.brigadeiro||0;
-  document.getElementById('kpiQtdTravessa').textContent=(contagem.travessa_pacoca||0)+(contagem.travessa_romeu||0);
-  document.getElementById('kpiMediaDia').textContent=fmtBRL(media);
-  document.getElementById('kpiMelhorDia').textContent=melhor?fmtShort(melhor[0])+' ('+fmtBRL(melhor[1])+')':'—';
-  renderProjecao(tL,media);
-  // Evolução
-  const datas=Object.keys(lpd).sort(); let r=0;
-  const eL=[],eD=[],eM=[];
-  datas.forEach(d=>{r+=lpd[d];eL.push(fmtShort(d));eD.push(+r.toFixed(2));eM.push(state.meta||null);});
-  if(chartEvolucao) chartEvolucao.destroy();
-  chartEvolucao=new Chart(document.getElementById('chartEvolucao'),{type:'line',
-    data:{labels:eL,datasets:[
-      {label:'Lucro acumulado',data:eD,borderColor:'#B5832A',backgroundColor:'rgba(181,131,42,0.1)',fill:true,tension:0.4,pointRadius:4,pointBackgroundColor:'#B5832A',borderWidth:2.5},
-      ...(state.meta>0?[{label:'Meta',data:eM,borderColor:'#B5606A',borderDash:[5,4],borderWidth:1.5,pointRadius:0,fill:false}]:[])
-    ]},options:chartOpts(true)});
-  // Barras 14d
-  const hoje=todayStr(); const d14=[];
-  for(let i=13;i>=0;i--) d14.push(dateAdd(hoje,-i));
-  const l14=d14.map(d=>+(lpd[d]||0).toFixed(2));
-  if(chartDias) chartDias.destroy();
-  chartDias=new Chart(document.getElementById('chartDias'),{type:'bar',
-    data:{labels:d14.map(fmtShort),datasets:[{label:'Lucro (R$)',data:l14,
-      backgroundColor:l14.map(x=>x>0?'rgba(181,131,42,0.82)':'rgba(181,131,42,0.13)'),borderRadius:6,borderSkipped:false}]},
-    options:chartOpts(false)});
-  // Mix
-  if(chartMix) chartMix.destroy();
-  const mixLabels=[]; const mixData=[]; const mixColors=['#B5832A','#B5606A','#E65100','#6A1B9A','#8E24AA'];
-  Object.entries(DOCES).forEach(([tipo,d],i)=>{
-    const qtd=contagem[tipo]||0; if(qtd>0){mixLabels.push(d.emoji+' '+d.nome);mixData.push(qtd);}
+
+  const diasU      = Object.keys(lpd);
+  const tL         = calcDestinacao(p.reduce((s,x) => s + (parseFloat(x.total)||0), 0)).meta;
+  const media      = diasU.length > 0 ? tL / diasU.length : 0;
+  const melhorEntry= Object.entries(lpd).sort((a,b) => b[1]-a[1])[0];
+
+  document.getElementById('kpiQtdPacoca').textContent    = contagem.pacoca||0;
+  document.getElementById('kpiQtdRomeu').textContent     = contagem.romeu||0;
+  document.getElementById('kpiQtdBrigadeiro').textContent= contagem.brigadeiro||0;
+  document.getElementById('kpiQtdTravessa').textContent  = (contagem.travessa_pacoca||0)+(contagem.travessa_romeu||0);
+  document.getElementById('kpiMediaDia').textContent     = fmtBRL(media);
+  document.getElementById('kpiMelhorDia').textContent    = melhorEntry
+    ? fmtShort(melhorEntry[0])+' ('+fmtBRL(melhorEntry[1])+')'
+    : '—';
+
+  renderProjecao(tL, media);
+
+  // ── Evolução acumulada ──
+  const datas = Object.keys(lpd).sort();
+  let r = 0;
+  const eL=[], eD=[], eM=[];
+  datas.forEach(d => {
+    r += lpd[d];
+    eL.push(fmtShort(d));
+    eD.push(+r.toFixed(2));
+    eM.push(state.meta||null);
   });
-  if(mixData.length>0) chartMix=new Chart(document.getElementById('chartMix'),{type:'doughnut',
-    data:{labels:mixLabels,datasets:[{data:mixData,backgroundColor:mixColors.slice(0,mixData.length),borderWidth:0,hoverOffset:6}]},
-    options:{responsive:true,maintainAspectRatio:true,aspectRatio:1,cutout:'60%',
-      plugins:{legend:{position:'bottom',labels:{font:{family:'Quicksand',size:11,weight:'700'},color:'#3A2010',padding:12,usePointStyle:true}},
-        tooltip:{callbacks:{label:ctx=>' '+ctx.label+': '+ctx.raw+' un.'}}}}});
+
+  if (chartEvolucao) chartEvolucao.destroy();
+  chartEvolucao = new Chart(document.getElementById('chartEvolucao'), {
+    type: 'line',
+    data: { labels: eL, datasets: [
+      { label:'Lucro acumulado', data:eD, borderColor:'#B5832A', backgroundColor:'rgba(181,131,42,0.1)',
+        fill:true, tension:0.4, pointRadius:eL.length > 30 ? 0 : 4, pointBackgroundColor:'#B5832A', borderWidth:2.5 },
+      ...(state.meta > 0 ? [{ label:'Meta', data:eM, borderColor:'#B5606A', borderDash:[5,4], borderWidth:1.5, pointRadius:0, fill:false }] : [])
+    ]},
+    options: chartOpts(true)
+  });
+
+  // ── Barras 14 dias ──
+  const hoje = todayStr();
+  const d14  = [];
+  for (let i=13; i>=0; i--) d14.push(dateAdd(hoje,-i));
+  const l14  = d14.map(d => +(lpd[d]||0).toFixed(2));
+
+  if (chartDias) chartDias.destroy();
+  chartDias = new Chart(document.getElementById('chartDias'), {
+    type: 'bar',
+    data: { labels: d14.map(fmtShort), datasets: [{
+      label:'Lucro (R$)', data:l14,
+      backgroundColor: l14.map(x => x>0 ? 'rgba(181,131,42,0.82)' : 'rgba(181,131,42,0.13)'),
+      borderRadius:6, borderSkipped:false
+    }]},
+    options: chartOpts(false)
+  });
+
+  // ── Doughnut mix ──
+  if (chartMix) chartMix.destroy();
+  const mixLabels=[], mixData=[];
+  const mixColors=['#B5832A','#B5606A','#E65100','#6A1B9A','#8E24AA'];
+  Object.entries(DOCES).forEach(([tipo,d]) => {
+    const qtd = contagem[tipo]||0;
+    if (qtd > 0) { mixLabels.push(d.emoji+' '+d.nome); mixData.push(qtd); }
+  });
+  if (mixData.length > 0) {
+    chartMix = new Chart(document.getElementById('chartMix'), {
+      type: 'doughnut',
+      data: { labels: mixLabels, datasets: [{
+        data: mixData,
+        backgroundColor: mixColors.slice(0, mixData.length),
+        borderWidth:0, hoverOffset:6
+      }]},
+      options: {
+        responsive:true, maintainAspectRatio:true, aspectRatio:1, cutout:'60%',
+        plugins: {
+          legend: { position:'bottom', labels:{ font:{family:'Quicksand',size:11,weight:'700'}, color:'#3A2010', padding:12, usePointStyle:true }},
+          tooltip: { callbacks:{ label: ctx => ' '+ctx.label+': '+ctx.raw+' un.' }}
+        }
+      }
+    });
+  }
 }
 
 function renderProjecao(lucro,media) {
