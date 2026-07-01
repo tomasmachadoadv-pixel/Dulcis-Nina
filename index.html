@@ -1351,26 +1351,76 @@ document.addEventListener('DOMContentLoaded', async ()=>{
   document.getElementById('fData').value=todayStr();
   document.getElementById('encData').value=todayStr();
 
+  // 1. Carrega cache local imediatamente (evita tela em branco)
   cacheLoad();
   renderAll();
   if(state.meta>0)       document.getElementById('cfgMeta').value=state.meta;
   if(state.metaMensal>0) document.getElementById('cfgMetaMensal').value=state.metaMensal;
 
   setSyncStatus('syncing','Carregando…');
-  try{
-    const data=await apiCall({action:'get_all'});
-    const temDados=(data.pedidos||[]).length>0||data.meta>0;
-    if(temDados){
-      state.meta=data.meta||0;
-      state.pedidos=data.pedidos||[];
-      if(data.encomendas) state.encomendas=data.encomendas;
+  try {
+    const data = await apiCall({action:'get_all'});
+    const temPedidosNoSheets = (data.pedidos||[]).length > 0;
+    const temMetaNoSheets    = (data.meta||0) > 0;
+
+    if (temPedidosNoSheets || temMetaNoSheets) {
+      // Sheets tem dados — usa como fonte de verdade
+      state.meta    = data.meta    || state.meta;
+      state.pedidos = data.pedidos || [];
+      if (data.encomendas && data.encomendas.length) state.encomendas = data.encomendas;
       cacheSave(); renderAll();
       if(state.meta>0) document.getElementById('cfgMeta').value=state.meta;
-      setSyncStatus('ok',state.pedidos.length+' pedido(s) carregado(s)');
+      setSyncStatus('ok', state.pedidos.length+' pedido(s) carregado(s)');
     } else {
-      setSyncStatus('ok','Pronto para registrar');
+      // Sheets vazio — verifica se há dados locais para migrar
+      // Tenta todas as chaves de cache possíveis (versões antigas)
+      const chaves = [LS_KEY, 'docinhometa_v2', 'docinhometa_v1', 'dulcisnina_v1'];
+      let dadosParaMigrar = null;
+      for (const ch of chaves) {
+        try {
+          const raw = localStorage.getItem(ch);
+          if (raw) { dadosParaMigrar = JSON.parse(raw); break; }
+        } catch(_){}
+      }
+
+      if (dadosParaMigrar) {
+        // Converte vendas antigas para pedidos se necessário
+        let pedidosParaMigrar = dadosParaMigrar.pedidos || [];
+        if (!pedidosParaMigrar.length && dadosParaMigrar.vendas && dadosParaMigrar.vendas.length) {
+          pedidosParaMigrar = dadosParaMigrar.vendas.map((v,i) => {
+            const p = migrarVendaParaPedido(v);
+            p.num = p.num || (i+1);
+            return p;
+          });
+        }
+
+        if (pedidosParaMigrar.length > 0) {
+          setSyncStatus('syncing', 'Enviando '+pedidosParaMigrar.length+' pedido(s) para o Sheets…');
+          // Sobe meta se houver
+          if (dadosParaMigrar.meta > 0) {
+            await apiCall({action:'set_meta', meta: dadosParaMigrar.meta});
+            state.meta = dadosParaMigrar.meta;
+          }
+          // Sobe pedidos um a um
+          let enviados = 0;
+          for (const p of pedidosParaMigrar) {
+            try { await apiPedido(p); enviados++; } catch(_){}
+          }
+          state.pedidos = pedidosParaMigrar;
+          pedidoNumSeq  = Math.max(...pedidosParaMigrar.map(p=>p.num||0)) + 1;
+          cacheSave(); renderAll();
+          showToast('✅ '+enviados+' pedido(s) migrados para o Sheets!');
+          setSyncStatus('ok', enviados+' pedido(s) sincronizados');
+        } else {
+          setSyncStatus('ok','Pronto para registrar');
+        }
+      } else {
+        setSyncStatus('ok','Pronto para registrar');
+      }
     }
-  } catch(e){ setSyncStatus('error','Sem conexão — dados locais em uso'); }
+  } catch(e) {
+    setSyncStatus('error','Sem conexão — dados locais em uso');
+  }
 
   startPolling();
 });
