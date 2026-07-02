@@ -945,6 +945,7 @@ function initEventos() {
       document.querySelectorAll('.tab-pane').forEach(p=>p.classList.remove('active'));
       btn.classList.add('active');
       document.getElementById('tab-'+btn.dataset.tab).classList.add('active');
+      // Sempre re-renderiza ao abrir a aba — garante dados frescos
       if(btn.dataset.tab==='graficos')   renderGraficos();
       if(btn.dataset.tab==='financeiro') renderFinanceiro();
     });
@@ -1174,8 +1175,13 @@ function exportarCSV() {
 function renderAll() {
   renderMeta(); renderMetaMensal(); renderKPIs(); renderCaixinhas();
   renderAlertas(); renderTabela(); renderEncomendas();
-  if(document.getElementById('tab-graficos').classList.contains('active'))   renderGraficos();
-  if(document.getElementById('tab-financeiro').classList.contains('active')) renderFinanceiro();
+  // Sempre renderiza gráficos e financeiro para garantir dados atualizados
+  // Chart.js só cria os canvas quando visíveis, mas atualiza dados sempre
+  if (document.getElementById('tab-graficos').classList.contains('active'))   renderGraficos();
+  if (document.getElementById('tab-financeiro').classList.contains('active')) renderFinanceiro();
+  // Marca como "precisa atualizar" para quando o usuário abrir a aba
+  window._graficosPrecisaAtualizar   = true;
+  window._financeiroPrecisaAtualizar = true;
 }
 
 function renderMeta() {
@@ -1370,8 +1376,9 @@ function renderFinanceiro() {
       +'<div class="rank-val">'+fmtBRL(c.total)+'</div></div>').join('');
   }
   // Custos
-  const tc=state.custos.reduce((s,c)=>s+c.val,0);
-  const ll=state.pedidos.filter(p=>p.pago).reduce((s,p)=>s+p.meta,0)-tc;
+  const tc = state.custos.reduce((s,c) => s+c.val, 0);
+  const totalPagosBruto = state.pedidos.filter(p=>p.pago).reduce((s,p)=>s+(parseFloat(p.total)||0),0);
+  const ll = calcDestinacao(totalPagosBruto).meta - tc;
   document.getElementById('custoTotalGasto').textContent=fmtBRL(tc);
   document.getElementById('custoLucroLiq').textContent=fmtBRL(ll);
   const cl=document.getElementById('custosList');
@@ -1388,6 +1395,15 @@ function renderFinanceiro() {
 // ─── Gráficos ─────────────────────────────────────
 function renderGraficos() {
   const p = state.pedidos;
+
+  // Diagnóstico rápido — mostra no console quantos pedidos há e como estão as datas
+  if (p.length > 0) {
+    console.log('[Dulcis] renderGraficos — '+p.length+' pedidos');
+    console.log('[Dulcis] Exemplo data:', p[0].data, '→ normDate:', normDate(p[0].data));
+    console.log('[Dulcis] Exemplo total:', p[0].total, '→ parseFloat:', parseFloat(p[0].total));
+  } else {
+    console.log('[Dulcis] renderGraficos — sem pedidos');
+  }
   const contagem = {};
   const lpd = {};
 
