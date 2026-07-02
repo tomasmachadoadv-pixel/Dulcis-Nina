@@ -620,14 +620,22 @@ function cacheLoad() {
     const r = localStorage.getItem(LS_KEY);
     if (r) {
       const parsed = JSON.parse(r);
-      state = Object.assign({ meta:0,metaMensal:0,pedidos:[],encomendas:[],custos:[] }, parsed);
-      // migração: campo vendas → pedidos
+      // Mescla preservando todos os campos — nunca perde metaMensal, custos, encomendas
+      state = {
+        meta:        parsed.meta        || 0,
+        metaMensal:  parsed.metaMensal  || 0,
+        pedidos:     parsed.pedidos     || [],
+        encomendas:  parsed.encomendas  || [],
+        custos:      parsed.custos      || [],
+      };
+      // migração: vendas antigas → pedidos
       if (!state.pedidos.length && parsed.vendas && parsed.vendas.length) {
         state.pedidos = parsed.vendas.map(v => migrarVendaParaPedido(v));
       }
     }
-    // calcula próximo número de pedido
-    pedidoNumSeq = state.pedidos.length ? Math.max(...state.pedidos.map(p=>p.num||0)) + 1 : 1;
+    pedidoNumSeq = state.pedidos.length
+      ? Math.max(...state.pedidos.map(p => p.num||0)) + 1
+      : 1;
   } catch(_){}
 }
 function cacheSave() {
@@ -1531,12 +1539,22 @@ document.addEventListener('DOMContentLoaded', async ()=>{
     const temMetaNoSheets    = (data.meta||0) > 0;
 
     if (temPedidosNoSheets || temMetaNoSheets) {
-      // Sheets tem dados — usa como fonte de verdade
+      // Sheets tem dados — usa como fonte de verdade para pedidos/meta
       state.meta    = data.meta    || state.meta;
       state.pedidos = data.pedidos || [];
-      if (data.encomendas && data.encomendas.length) state.encomendas = data.encomendas;
+
+      // Encomendas: mescla igual ao syncFromSheets
+      if (data.encomendas && data.encomendas.length) {
+        const idsSheets = new Set(data.encomendas.map(e => e.id));
+        const localOnly = state.encomendas.filter(e => !idsSheets.has(e.id));
+        state.encomendas = [...data.encomendas, ...localOnly];
+      }
+      // metaMensal e custos: preserva o que estava no cache local
+      // (nunca vêm do Sheets)
+
       cacheSave(); renderAll();
-      if(state.meta>0) document.getElementById('cfgMeta').value=state.meta;
+      if (state.meta > 0) document.getElementById('cfgMeta').value = state.meta;
+      if (state.metaMensal > 0) document.getElementById('cfgMetaMensal').value = state.metaMensal;
       setSyncStatus('ok', state.pedidos.length+' pedido(s) carregado(s)');
     } else {
       // Sheets vazio — verifica se há dados locais para migrar
