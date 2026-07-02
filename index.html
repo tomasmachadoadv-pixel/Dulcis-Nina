@@ -1075,8 +1075,12 @@ async function salvarEncomenda() {
   renderEncCarrinho(); renderEncomendas(); showToast('📬 Encomenda salva!');
   // Sobe para Sheets
   setSyncStatus('syncing','Salvando encomenda…');
-  try{ await apiEncomenda(enc); setSyncStatus('ok','Encomenda salva no Sheets ✓'); }
-  catch(e){ setSyncStatus('error','Erro: '+String(e.message).slice(0,35)); }
+  try {
+    const result = await apiEncomenda(enc);
+    setSyncStatus('ok','Encomenda salva no Sheets ✓');
+  } catch(e) {
+    setSyncStatus('error','Enc erro: '+String(e.message).slice(0,50));
+  }
 }
 
 function removerEncomenda(id) {
