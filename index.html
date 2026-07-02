@@ -597,7 +597,7 @@ function calcDestinacao(total) {
 
 const API_URL = 'https://script.google.com/macros/s/AKfycbxNFVLmO-LlEfxFVElZxkCdsSCJVirkWlt9Z_E6HIpSV8dEUquf5DRjfc8JRJrZjOBC-Q/exec';
 const LS_KEY  = 'dulcisnina_v1';
-const POLL_MS = 20000;
+const POLL_MS = 30000;
 const DIAS_ALERTA = 3;
 
 // ═══════════════════════════════════════════════════
@@ -715,15 +715,32 @@ async function syncFromSheets(showMsg) {
   setSyncStatus('syncing','Sincronizando…');
   try {
     const data = await apiCall({action:'get_all'});
-    state.meta   = data.meta   || 0;
-    if (data.pedidos  && data.pedidos.length)  state.pedidos  = data.pedidos;
-    if (data.encomendas) state.encomendas = data.encomendas;
-    cacheSave(); renderAll();
-    if (state.meta>0) document.getElementById('cfgMeta').value=state.meta;
-    if (state.metaMensal>0) document.getElementById('cfgMetaMensal').value=state.metaMensal;
-    const ts=new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
-    setSyncStatus('ok', showMsg?'Atualizado às '+ts:state.pedidos.length+' pedido(s) carregado(s)');
-  } catch(e) { setSyncStatus('error','Erro: '+String(e.message).slice(0,35)); }
+
+    // Pedidos: Sheets é fonte de verdade
+    if (data.pedidos && data.pedidos.length) state.pedidos = data.pedidos;
+    if ((data.meta || 0) > 0) state.meta = data.meta;
+
+    // Encomendas: mescla Sheets + local (evita apagar encomendas não salvas ainda)
+    if (data.encomendas && data.encomendas.length) {
+      const idsSheets = new Set(data.encomendas.map(e => e.id));
+      const localOnly = state.encomendas.filter(e => !idsSheets.has(e.id));
+      state.encomendas = [...data.encomendas, ...localOnly];
+      // Tenta subir as encomendas que só estão no local
+      for (const enc of localOnly) {
+        apiEncomenda(enc).catch(() => {});
+      }
+    }
+
+    // Custos: nunca sobrescreve — ficam só no cache local
+    cacheSave();
+    renderAll();
+    if (state.meta > 0) document.getElementById('cfgMeta').value = state.meta;
+    if (state.metaMensal > 0) document.getElementById('cfgMetaMensal').value = state.metaMensal;
+    const ts = new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+    setSyncStatus('ok', showMsg ? 'Atualizado às '+ts : state.pedidos.length+' pedido(s) carregado(s)');
+  } catch(e) {
+    setSyncStatus('error','Erro: '+String(e.message).slice(0,40));
+  }
 }
 
 function startPolling() { setInterval(()=>{ if(!operacaoPendente) syncFromSheets(false); }, POLL_MS); }
@@ -1075,17 +1092,24 @@ async function salvarEncomenda() {
   renderEncCarrinho(); renderEncomendas(); showToast('📬 Encomenda salva!');
   // Sobe para Sheets
   setSyncStatus('syncing','Salvando encomenda…');
+  operacaoPendente = true;
   try {
     const result = await apiEncomenda(enc);
     setSyncStatus('ok','Encomenda salva no Sheets ✓');
   } catch(e) {
     setSyncStatus('error','Enc erro: '+String(e.message).slice(0,50));
+  } finally {
+    setTimeout(() => { operacaoPendente = false; }, 3000);
   }
 }
 
 function removerEncomenda(id) {
-  state.encomendas=state.encomendas.filter(e=>e.id!==id); cacheSave(); renderEncomendas();
-  apiCall({action:'delete_encomenda',id:String(id)}).catch(()=>{});
+  state.encomendas = state.encomendas.filter(e => e.id !== id);
+  cacheSave(); renderEncomendas();
+  operacaoPendente = true;
+  apiCall({action:'delete_encomenda', id:String(id)})
+    .catch(() => {})
+    .finally(() => setTimeout(() => { operacaoPendente = false; }, 3000));
 }
 
 function converterEncomenda(id) {
