@@ -544,7 +544,9 @@ select.form-input{cursor:pointer}
     <div class="kpi-card"><span class="kpi-icon">🥜</span><div class="kpi-value" id="kpiQtdPacoca">0</div><div class="kpi-label">Paçocas</div></div>
     <div class="kpi-card"><span class="kpi-icon">🧀</span><div class="kpi-value" id="kpiQtdRomeu">0</div><div class="kpi-label">Romeu e Julieta</div></div>
     <div class="kpi-card"><span class="kpi-icon">🍫</span><div class="kpi-value" id="kpiQtdBrigadeiro">0</div><div class="kpi-label">Brigadeiros</div></div>
+    <div class="kpi-card"><span class="kpi-icon">🍋</span><div class="kpi-value" id="kpiQtdMousse">0</div><div class="kpi-label">Mousses Limão</div></div>
     <div class="kpi-card"><span class="kpi-icon">🍽️</span><div class="kpi-value" id="kpiQtdTravessa">0</div><div class="kpi-label">Travessas</div></div>
+    <div class="kpi-card"><span class="kpi-icon">🎁</span><div class="kpi-value" id="kpiQtdCombo">0</div><div class="kpi-label">Combos</div></div>
   </div>
   <div class="card">
     <div class="ct-orn"><div class="ct-line"></div><div class="ct-text">Mix de doces · unidades</div><div class="ct-line"></div></div>
@@ -576,22 +578,42 @@ select.form-input{cursor:pointer}
 //  CATÁLOGO DE DOCES
 // ═══════════════════════════════════════════════════
 const DOCES = {
-  pacoca:          { nome:'Paçoca de Colher',        emoji:'🥜', preco:7.50,   travessa:false },
-  romeu:           { nome:'Romeu e Julieta',          emoji:'🧀', preco:7.50,   travessa:false },
-  brigadeiro:      { nome:'Brigadeiro de Colher',     emoji:'🍫', preco:7.50,   travessa:false },
-  travessa_pacoca: { nome:'Travessa Paçoca',          emoji:'🍽️', preco:150.00, travessa:true  },
-  travessa_romeu:  { nome:'Travessa Romeu e Julieta', emoji:'🍽️', preco:150.00, travessa:true  },
+  pacoca:          { nome:'Paçoca de Colher',        emoji:'🥜', preco:7.50,   travessa:false, combo:false },
+  romeu:           { nome:'Romeu e Julieta',          emoji:'🧀', preco:7.50,   travessa:false, combo:false },
+  brigadeiro:      { nome:'Brigadeiro de Colher',     emoji:'🍫', preco:7.50,   travessa:false, combo:false },
+  mousse_limao:    { nome:'Mousse de Limão',           emoji:'🍋', preco:7.50,   travessa:false, combo:false },
+  travessa_pacoca: { nome:'Travessa Paçoca',          emoji:'🍽️', preco:150.00, travessa:true,  combo:false },
+  travessa_romeu:  { nome:'Travessa Romeu e Julieta', emoji:'🍽️', preco:150.00, travessa:true,  combo:false },
+  combo:           { nome:'Combo Degustação',         emoji:'🎁', preco:25.00,  travessa:false, combo:true  },
 };
 
-// Percentuais fixos de destinação — aplicados sobre o total recebido
-const PCTS = { giro:0.45, reserva:0.05, meta:0.50 };
+// Percentuais fixos por tipo
+// Doces individuais: 45% giro / 5% reserva / 50% lucro
+// Combo degustação:  54% giro / 6% reserva / 40% lucro
+const PCTS       = { giro:0.45, reserva:0.05, meta:0.50 };
+const PCTS_COMBO = { giro:0.54, reserva:0.06, meta:0.40 };
 
-// Calcula destinação a partir do valor total recebido
-function calcDestinacao(total) {
+function pctsPorTipo(tipo) {
+  return DOCES[tipo]?.combo ? PCTS_COMBO : PCTS;
+}
+
+// Calcula destinação de um valor pelo tipo do item
+function calcDestinacaoItem(total, tipo) {
+  const p = pctsPorTipo(tipo);
   return {
-    giro:    +(total * PCTS.giro).toFixed(2),
-    reserva: +(total * PCTS.reserva).toFixed(2),
-    meta:    +(total * PCTS.meta).toFixed(2),
+    giro:    +(total * p.giro).toFixed(2),
+    reserva: +(total * p.reserva).toFixed(2),
+    meta:    +(total * p.meta).toFixed(2),
+  };
+}
+
+// Calcula destinação genérica (sem tipo = percentuais padrão)
+function calcDestinacao(total, tipo) {
+  const p = tipo ? pctsPorTipo(tipo) : PCTS;
+  return {
+    giro:    +(total * p.giro).toFixed(2),
+    reserva: +(total * p.reserva).toFixed(2),
+    meta:    +(total * p.meta).toFixed(2),
   };
 }
 
@@ -661,19 +683,26 @@ function migrarVendaParaPedido(v) {
 }
 
 // ═══════════════════════════════════════════════════
-//  CÁLCULO DE PEDIDO — percentuais fixos 45/5/50
+//  CÁLCULO DE PEDIDO — percentuais por tipo de item
 // ═══════════════════════════════════════════════════
 function calcularPedido(itens) {
-  // Total bruto: soma dos preços × qtd (com eventual desconto na travessa)
-  let total = 0;
+  let total=0, giro=0, reserva=0, meta=0;
   itens.forEach(item => {
     const d = DOCES[item.tipo]; if (!d) return;
     const preco = (item.precoUnit !== undefined && item.precoUnit > 0) ? item.precoUnit : d.preco;
-    total += preco * (item.qtd || 1);
+    const subtotal = preco * (item.qtd || 1);
+    const dest = calcDestinacaoItem(subtotal, item.tipo);
+    total   += subtotal;
+    giro    += dest.giro;
+    reserva += dest.reserva;
+    meta    += dest.meta;
   });
-  total = +total.toFixed(2);
-  const dest = calcDestinacao(total);
-  return { total, giro: dest.giro, reserva: dest.reserva, meta: dest.meta };
+  return {
+    total:   +total.toFixed(2),
+    giro:    +giro.toFixed(2),
+    reserva: +reserva.toFixed(2),
+    meta:    +meta.toFixed(2),
+  };
 }
 
 // ═══════════════════════════════════════════════════
@@ -1187,12 +1216,8 @@ function renderAll() {
 function renderMeta() {
   const pagas = state.pedidos.filter(p => p.pago);
   const pends  = state.pedidos.filter(p => !p.pago);
-  const totalPago    = pagas.reduce((s,p) => s + (parseFloat(p.total)||0), 0);
-  const totalPendente= pends.reduce((s,p)  => s + (parseFloat(p.total)||0), 0);
-  const destPago     = calcDestinacao(totalPago);
-  const destPendente = calcDestinacao(totalPendente);
-  const lucroRecebido = destPago.meta;
-  const lucroPendente = destPendente.meta;
+  const lucroRecebido = pagas.reduce((s,p) => s+(parseFloat(p.meta)||0), 0);
+  const lucroPendente = pends.reduce((s,p)  => s+(parseFloat(p.meta)||0), 0);
   const meta = state.meta || 0;
   const pct  = meta > 0 ? Math.min(100, (lucroRecebido / meta) * 100) : 0;
 
@@ -1234,12 +1259,12 @@ function renderKPIs() {
   const hoje = todayStr();
   const d7   = dateAdd(hoje, -7);
 
-  const totalUnid    = p.reduce((s,x) => s + normItens(x).reduce((ss,i) => ss + (i.qtd||1), 0), 0);
-  const totalRecebido= pagas.reduce((s,x) => s + (parseFloat(x.total)||0), 0);
-  const totalPendente= pends.reduce((s,x)  => s + (parseFloat(x.total)||0), 0);
-  const totalHoje    = pagas.filter(x => normDate(x.data) === hoje).reduce((s,x) => s + (parseFloat(x.total)||0), 0);
-  const totalSemana  = pagas.filter(x => normDate(x.data) > d7).reduce((s,x)    => s + (parseFloat(x.total)||0), 0);
-  const lucroTotal   = calcDestinacao(totalRecebido).meta;
+  const totalUnid     = p.reduce((s,x) => s + normItens(x).reduce((ss,i) => ss+(i.qtd||1),0), 0);
+  const totalRecebido = pagas.reduce((s,x) => s+(parseFloat(x.total)||0), 0);
+  const totalPendente = pends.reduce((s,x)  => s+(parseFloat(x.total)||0), 0);
+  const totalHoje     = pagas.filter(x=>normDate(x.data)===hoje).reduce((s,x)=>s+(parseFloat(x.total)||0),0);
+  const totalSemana   = pagas.filter(x=>normDate(x.data)>d7).reduce((s,x)=>s+(parseFloat(x.total)||0),0);
+  const lucroTotal    = pagas.reduce((s,x) => s+(parseFloat(x.meta)||0), 0);
 
   document.getElementById('kpiRecebido').textContent    = fmtBRL(totalRecebido);
   document.getElementById('kpiVlPendente').textContent  = fmtBRL(totalPendente);
@@ -1254,29 +1279,41 @@ function renderKPIs() {
 function renderCaixinhas() {
   const p = state.pedidos;
   const n = p.length;
-  const totalGeral = p.reduce((s,x) => s + (parseFloat(x.total)||0), 0);
-  const destGeral  = calcDestinacao(totalGeral);
 
-  document.getElementById('cxGiro').textContent    = fmtBRL(destGeral.giro);
-  document.getElementById('cxGiroSub').textContent = n + ' pedido(s)';
-  document.getElementById('cxReserva').textContent    = fmtBRL(destGeral.reserva);
-  document.getElementById('cxReservaSub').textContent = n + ' pedido(s)';
-  document.getElementById('cxMeta').textContent    = fmtBRL(destGeral.meta);
-  document.getElementById('cxMetaSub').textContent = n + ' pedido(s)';
+  // Soma item a item respeitando percentuais por tipo
+  let totalGeral=0, giroGeral=0, reservaGeral=0, metaGeral=0;
+  p.forEach(ped => {
+    totalGeral   += parseFloat(ped.total)   ||0;
+    giroGeral    += parseFloat(ped.giro)    ||0;
+    reservaGeral += parseFloat(ped.reserva) ||0;
+    metaGeral    += parseFloat(ped.meta)    ||0;
+  });
+
+  document.getElementById('cxGiro').textContent    = fmtBRL(giroGeral);
+  document.getElementById('cxGiroSub').textContent = n+' pedido(s)';
+  document.getElementById('cxReserva').textContent    = fmtBRL(reservaGeral);
+  document.getElementById('cxReservaSub').textContent = n+' pedido(s)';
+  document.getElementById('cxMeta').textContent    = fmtBRL(metaGeral);
+  document.getElementById('cxMetaSub').textContent = n+' pedido(s)';
 
   // Transferência do dia — só pedidos PAGOS hoje
-  const hoje   = todayStr();
+  const hoje      = todayStr();
   const pagosHoje = p.filter(x => x.pago && normDate(x.data) === hoje);
-  const totalHoje = pagosHoje.reduce((s,x) => s + (parseFloat(x.total)||0), 0);
-  const card   = document.getElementById('transferenciaCard');
+  let tGiro=0, tReserva=0, tMeta=0, tTotal=0;
+  pagosHoje.forEach(ped => {
+    tTotal   += parseFloat(ped.total)   ||0;
+    tGiro    += parseFloat(ped.giro)    ||0;
+    tReserva += parseFloat(ped.reserva) ||0;
+    tMeta    += parseFloat(ped.meta)    ||0;
+  });
 
-  if (totalHoje > 0) {
-    const destHoje = calcDestinacao(totalHoje);
+  const card = document.getElementById('transferenciaCard');
+  if (tTotal > 0) {
     card.style.display = 'block';
-    document.getElementById('transfTotal').textContent   = fmtBRL(totalHoje);
-    document.getElementById('transfGiro').textContent    = fmtBRL(destHoje.giro);
-    document.getElementById('transfReserva').textContent = fmtBRL(destHoje.reserva);
-    document.getElementById('transfMeta').textContent    = fmtBRL(destHoje.meta);
+    document.getElementById('transfTotal').textContent   = fmtBRL(tTotal);
+    document.getElementById('transfGiro').textContent    = fmtBRL(tGiro);
+    document.getElementById('transfReserva').textContent = fmtBRL(tReserva);
+    document.getElementById('transfMeta').textContent    = fmtBRL(tMeta);
   } else {
     card.style.display = 'none';
   }
@@ -1377,8 +1414,8 @@ function renderFinanceiro() {
   }
   // Custos
   const tc = state.custos.reduce((s,c) => s+c.val, 0);
-  const totalPagosBruto = state.pedidos.filter(p=>p.pago).reduce((s,p)=>s+(parseFloat(p.total)||0),0);
-  const ll = calcDestinacao(totalPagosBruto).meta - tc;
+  const totalPagosMeta = state.pedidos.filter(p=>p.pago).reduce((s,p)=>s+(parseFloat(p.meta)||0),0);
+  const ll = totalPagosMeta - tc;
   document.getElementById('custoTotalGasto').textContent=fmtBRL(tc);
   document.getElementById('custoLucroLiq').textContent=fmtBRL(ll);
   const cl=document.getElementById('custosList');
@@ -1422,20 +1459,21 @@ function renderGraficos() {
 
     const dia = normDate(x.data);
     if (dia && dia.length === 10) {
-      const dest = calcDestinacao(parseFloat(x.total)||0);
-      lpd[dia] = (lpd[dia]||0) + dest.meta;
+      lpd[dia] = (lpd[dia]||0) + (parseFloat(x.meta)||0);
     }
   });
 
   const diasU      = Object.keys(lpd);
-  const tL         = calcDestinacao(p.reduce((s,x) => s + (parseFloat(x.total)||0), 0)).meta;
+  const tL         = p.reduce((s,x) => s + (parseFloat(x.meta)||0), 0);
   const media      = diasU.length > 0 ? tL / diasU.length : 0;
   const melhorEntry= Object.entries(lpd).sort((a,b) => b[1]-a[1])[0];
 
   document.getElementById('kpiQtdPacoca').textContent    = contagem.pacoca||0;
   document.getElementById('kpiQtdRomeu').textContent     = contagem.romeu||0;
   document.getElementById('kpiQtdBrigadeiro').textContent= contagem.brigadeiro||0;
+  document.getElementById('kpiQtdMousse').textContent    = contagem.mousse_limao||0;
   document.getElementById('kpiQtdTravessa').textContent  = (contagem.travessa_pacoca||0)+(contagem.travessa_romeu||0);
+  document.getElementById('kpiQtdCombo').textContent     = contagem.combo||0;
   document.getElementById('kpiMediaDia').textContent     = fmtBRL(media);
   document.getElementById('kpiMelhorDia').textContent    = melhorEntry
     ? fmtShort(melhorEntry[0])+' ('+fmtBRL(melhorEntry[1])+')'
@@ -1485,7 +1523,7 @@ function renderGraficos() {
   // ── Doughnut mix ──
   if (chartMix) chartMix.destroy();
   const mixLabels=[], mixData=[];
-  const mixColors=['#B5832A','#B5606A','#E65100','#6A1B9A','#8E24AA'];
+  const mixColors=['#B5832A','#B5606A','#E65100','#F9A825','#6A1B9A','#1565C0','#2E7D32'];
   Object.entries(DOCES).forEach(([tipo,d]) => {
     const qtd = contagem[tipo]||0;
     if (qtd > 0) { mixLabels.push(d.emoji+' '+d.nome); mixData.push(qtd); }
