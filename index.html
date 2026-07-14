@@ -545,6 +545,7 @@ select.form-input{cursor:pointer}
     <div class="kpi-card"><span class="kpi-icon">🧀</span><div class="kpi-value" id="kpiQtdRomeu">0</div><div class="kpi-label">Romeu e Julieta</div></div>
     <div class="kpi-card"><span class="kpi-icon">🍫</span><div class="kpi-value" id="kpiQtdBrigadeiro">0</div><div class="kpi-label">Brigadeiros</div></div>
     <div class="kpi-card"><span class="kpi-icon">🍋</span><div class="kpi-value" id="kpiQtdMousse">0</div><div class="kpi-label">Mousses Limão</div></div>
+    <div class="kpi-card"><span class="kpi-icon">🍮</span><div class="kpi-value" id="kpiQtdPudim">0</div><div class="kpi-label">Pudins de Leite</div></div>
     <div class="kpi-card"><span class="kpi-icon">🍽️</span><div class="kpi-value" id="kpiQtdTravessa">0</div><div class="kpi-label">Travessas</div></div>
     <div class="kpi-card"><span class="kpi-icon">🎁</span><div class="kpi-value" id="kpiQtdCombo">0</div><div class="kpi-label">Combos</div></div>
   </div>
@@ -582,6 +583,7 @@ const DOCES = {
   romeu:           { nome:'Romeu e Julieta',          emoji:'🧀', preco:7.50,   travessa:false, combo:false },
   brigadeiro:      { nome:'Brigadeiro de Colher',     emoji:'🍫', preco:7.50,   travessa:false, combo:false },
   mousse_limao:    { nome:'Mousse de Limão',           emoji:'🍋', preco:7.50,   travessa:false, combo:false },
+  pudim:           { nome:'Pudim de Leite',            emoji:'🍮', preco:7.50,   travessa:false, combo:false },
   travessa_pacoca: { nome:'Travessa Paçoca',          emoji:'🍽️', preco:150.00, travessa:true,  combo:false },
   travessa_romeu:  { nome:'Travessa Romeu e Julieta', emoji:'🍽️', preco:150.00, travessa:true,  combo:false },
   combo:           { nome:'Combo Degustação',         emoji:'🎁', preco:25.00,  travessa:false, combo:true  },
@@ -1472,6 +1474,7 @@ function renderGraficos() {
   document.getElementById('kpiQtdRomeu').textContent     = contagem.romeu||0;
   document.getElementById('kpiQtdBrigadeiro').textContent= contagem.brigadeiro||0;
   document.getElementById('kpiQtdMousse').textContent    = contagem.mousse_limao||0;
+  document.getElementById('kpiQtdPudim').textContent     = contagem.pudim||0;
   document.getElementById('kpiQtdTravessa').textContent  = (contagem.travessa_pacoca||0)+(contagem.travessa_romeu||0);
   document.getElementById('kpiQtdCombo').textContent     = contagem.combo||0;
   document.getElementById('kpiMediaDia').textContent     = fmtBRL(media);
@@ -1523,7 +1526,7 @@ function renderGraficos() {
   // ── Doughnut mix ──
   if (chartMix) chartMix.destroy();
   const mixLabels=[], mixData=[];
-  const mixColors=['#B5832A','#B5606A','#E65100','#F9A825','#6A1B9A','#1565C0','#2E7D32'];
+  const mixColors=['#B5832A','#B5606A','#E65100','#F9A825','#8D4004','#6A1B9A','#1565C0','#2E7D32'];
   Object.entries(DOCES).forEach(([tipo,d]) => {
     const qtd = contagem[tipo]||0;
     if (qtd > 0) { mixLabels.push(d.emoji+' '+d.nome); mixData.push(qtd); }
