@@ -761,7 +761,8 @@ function calcularPedido(itens) {
 // ═══════════════════════════════════════════════════
 //  API — POST para escrita, GET apenas para leitura
 // ═══════════════════════════════════════════════════
-async function apiGet(params) {
+// Função única de chamada — tudo via GET (sem limitações de CORS)
+async function apiCall(params) {
   const parts = Object.entries(params).map(([k,v])=>k+'='+encodeURIComponent(String(v)));
   const url   = API_URL+'?'+parts.join('&');
   const ctrl  = new AbortController();
@@ -770,35 +771,20 @@ async function apiGet(params) {
     const res  = await fetch(url, {signal:ctrl.signal});
     clearTimeout(t);
     const data = await res.json();
-    if (!data.ok) throw new Error(data.error||'Erro GET');
+    if (!data.ok) throw new Error(data.error||'Erro');
     return data;
   } catch(e) { clearTimeout(t); if(e.name==='AbortError') throw new Error('Tempo esgotado'); throw e; }
 }
+// Aliases para leitura e escrita — mesma função
+const apiGet  = params => apiCall(params);
+const apiPost = body   => apiCall(body);
 
-async function apiPost(body) {
-  const ctrl = new AbortController();
-  const t    = setTimeout(()=>ctrl.abort(), 15000);
-  try {
-    const res  = await fetch(API_URL, {
-      method:  'POST',
-      mode:    'cors',
-      headers: { 'Content-Type':'application/json' },
-      body:    JSON.stringify(body),
-      signal:  ctrl.signal,
-    });
-    clearTimeout(t);
-    const data = await res.json();
-    if (!data.ok) throw new Error(data.error||'Erro POST');
-    return data;
-  } catch(e) { clearTimeout(t); if(e.name==='AbortError') throw new Error('Tempo esgotado'); throw e; }
-}
-
-// Atalhos semânticos
-const apiPedido    = p   => apiPost({ action:'add_pedido',    pedido:p });
-const apiEncomenda = enc => apiPost({ action:'add_encomenda', enc });
-const apiAporte    = a   => apiPost({ action:'add_aporte',    aporte:a });
-const apiMeta      = m   => apiPost({ action:'add_meta',      meta:m });
-const apiMetaUpd   = m   => apiPost({ action:'update_meta',   meta:m });
+// Atalhos semânticos — JSON serializado como parâmetro GET
+const apiPedido    = p   => apiCall({ action:'add_pedido',    pedido:  encodeURIComponent(JSON.stringify(p))   });
+const apiEncomenda = enc => apiCall({ action:'add_encomenda', enc:     encodeURIComponent(JSON.stringify(enc)) });
+const apiAporte    = a   => apiCall({ action:'add_aporte',    aporte:  encodeURIComponent(JSON.stringify(a))   });
+const apiMeta      = m   => apiCall({ action:'add_meta',      meta:    encodeURIComponent(JSON.stringify(m))   });
+const apiMetaUpd   = m   => apiCall({ action:'update_meta',   meta:    encodeURIComponent(JSON.stringify(m))   });
 
 async function syncFromSheets(showMsg) {
   setSyncStatus('syncing','Sincronizando…');
@@ -806,16 +792,31 @@ async function syncFromSheets(showMsg) {
     const data = await apiGet({action:'get_all'});
 
     if (data.pedidos && data.pedidos.length) state.pedidos = data.pedidos;
-    if ((data.meta||0) > 0)  state.meta      = data.meta;
-    if (data.metaNome)        state.metaNome  = data.metaNome;
-    if (data.metaInicio)      state.metaInicio= data.metaInicio;
-    if (data.metas)           state.metas     = data.metas;
-    if (data.aportes)         state.aportes   = data.aportes;
+    if ((data.meta||0) > 0)  state.meta       = data.meta;
+    if (data.metaNome)        state.metaNome   = data.metaNome;
+    if (data.metaInicio)      state.metaInicio = data.metaInicio;
+
+    // Metas concluídas: mescla
+    if (data.metas && data.metas.length) {
+      const idsS = new Set(data.metas.map(m=>m.id));
+      const soLocal = (state.metas||[]).filter(m=>!idsS.has(m.id));
+      state.metas = [...data.metas, ...soLocal];
+      for (const m of soLocal) apiMeta(m).catch(()=>{});
+    }
+
+    // Aportes: mescla — nunca sobrescreve aportes locais não enviados
+    if (data.aportes && data.aportes.length) {
+      const idsS = new Set(data.aportes.map(a=>a.id));
+      const soLocal = (state.aportes||[]).filter(a=>!idsS.has(a.id));
+      state.aportes = [...data.aportes, ...soLocal];
+      // Reenvia aportes que só estão no local
+      for (const a of soLocal) apiAporte(a).catch(()=>{});
+    }
 
     // Encomendas: mescla — preserva pendentes locais
     if (data.encomendas && data.encomendas.length) {
       const idsS   = new Set(data.encomendas.map(e=>e.id));
-      const soLocal= state.encomendas.filter(e=>!idsS.has(e.id));
+      const soLocal= (state.encomendas||[]).filter(e=>!idsS.has(e.id));
       state.encomendas = [...data.encomendas, ...soLocal];
       for (const enc of soLocal) apiEncomenda(enc).catch(()=>{});
     }
@@ -1077,7 +1078,7 @@ async function salvarMeta() {
   if (!state.metaInicio) state.metaInicio = todayStr();
   cacheSave(); renderAll(); showToast('Meta salva! ✨');
   try {
-    await apiPost({ action:'set_config', meta:v, metaNome:nome, metaInicio:state.metaInicio });
+    await apiCall({action:'set_config', meta:String(v), metaNome:nome, metaInicio:state.metaInicio||''});
     setSyncStatus('ok','Meta salva no Sheets ✓');
   } catch(e) { setSyncStatus('error','Erro: '+String(e.message).slice(0,35)); }
 }
@@ -1107,7 +1108,7 @@ async function addAporte() {
 
 async function removerAporte(id) {
   state.aportes = state.aportes.filter(a=>a.id!==id); cacheSave(); renderAll();
-  apiPost({action:'delete_aporte', id}).catch(()=>{});
+  apiCall({action:'delete_aporte', id:String(id)}).catch(()=>{});
 }
 
 // ─── Concluir meta ────────────────────────────────
@@ -1150,7 +1151,7 @@ async function concluirMeta() {
   operacaoPendente=true; setSyncStatus('syncing','Salvando…');
   try {
     await apiMeta(metaArq);
-    await apiPost({ action:'set_config', meta:0, metaNome:'', metaInicio:'' });
+    await apiCall({ action:'set_config', meta:'0', metaNome:'', metaInicio:'' });
     setSyncStatus('ok','Meta arquivada ✓');
   } catch(e){ setSyncStatus('error','Erro: '+String(e.message).slice(0,35)); }
   finally { setTimeout(()=>{operacaoPendente=false;},3000); }
@@ -1193,7 +1194,7 @@ async function registrarPedido() {
 async function removerPedido(id) {
   state.pedidos=state.pedidos.filter(p=>p.id!==id); cacheSave(); renderAll(); showToast('Pedido removido');
   operacaoPendente=true; setSyncStatus('syncing','Removendo…');
-  try{ await apiPost({action:'delete_pedido',id:Number(id)}); setSyncStatus('ok','Removido ✓'); }
+  try{ await apiCall({action:'delete_pedido',id:String(id)}); setSyncStatus('ok','Removido ✓'); }
   catch(e){ setSyncStatus('error','Erro: '+String(e.message).slice(0,35)); }
   finally{ setTimeout(()=>{operacaoPendente=false;},3000); }
 }
@@ -1205,7 +1206,7 @@ async function togglePagamento(id) {
   showToast(novo?'✅ Marcado como pago':'↩ Marcado como pendente');
   operacaoPendente=true; setSyncStatus('syncing','Salvando…');
   try{
-    await apiPost({action:'update_pago',id:Number(id),pago:novo});
+    await apiCall({action:'update_pago',id:String(id),pago:novo?'1':'0'});
     setSyncStatus('ok','Pago atualizado ✓');
   } catch(e){
     try{ await apiPedido({...state.pedidos[idx]}); setSyncStatus('ok','Pago salvo ✓'); }
@@ -1232,7 +1233,7 @@ async function salvarEdicao() {
   cacheSave(); renderAll(); fecharModal(); showToast('Pedido atualizado ✓');
   operacaoPendente=true; setSyncStatus('syncing','Atualizando…');
   try{
-    await apiPost({action:'delete_pedido',id:Number(id)});
+    await apiCall({action:'delete_pedido',id:String(id)});
     await apiPedido({...state.pedidos[idx]});
     setSyncStatus('ok','Atualizado no Sheets ✓');
   } catch(e){ setSyncStatus('error','Erro: '+String(e.message).slice(0,35)); }
@@ -1273,7 +1274,7 @@ function removerEncomenda(id) {
   state.encomendas = state.encomendas.filter(e => e.id !== id);
   cacheSave(); renderEncomendas();
   operacaoPendente = true;
-  apiPost({action:'delete_encomenda', id:Number(id)})
+  apiCall({action:'delete_encomenda', id:String(id)})
     .catch(() => {})
     .finally(() => setTimeout(() => { operacaoPendente = false; }, 3000));
 }
@@ -1810,7 +1811,7 @@ document.addEventListener('DOMContentLoaded', async ()=>{
           setSyncStatus('syncing', 'Enviando '+pedidosParaMigrar.length+' pedido(s) para o Sheets…');
           // Sobe meta se houver
           if (dadosParaMigrar.meta > 0) {
-            await apiPost({action:'set_config', meta:dadosParaMigrar.meta});
+            await apiCall({action:'set_config', meta:String(dadosParaMigrar.meta)});
             state.meta = dadosParaMigrar.meta;
           }
           // Sobe pedidos um a um
