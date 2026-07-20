@@ -301,6 +301,20 @@ select.form-input{cursor:pointer}
 .proj-sub{font-size:.6rem;font-weight:600;color:var(--muted);margin-top:2px}
 .proj-footer{font-size:.72rem;font-weight:700;color:var(--muted);text-align:center}
 
+/* APORTES */
+.aporte-item{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);font-size:.82rem;font-weight:600}
+.aporte-item:last-child{border-bottom:none}
+.aporte-badge{display:inline-block;background:var(--green-bg);color:var(--green);font-size:.65rem;font-weight:700;border-radius:8px;padding:2px 7px;border:1px solid var(--green-bd)}
+
+/* METAS CONCLUÍDAS */
+.meta-hist-card{background:var(--parchment);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:10px}
+.meta-hist-nome{font-family:'Comfortaa',cursive;font-size:1rem;font-weight:700;color:var(--brown);margin-bottom:6px}
+.meta-hist-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.meta-hist-item{font-size:.72rem;font-weight:700;color:var(--muted)}
+.meta-hist-item span{display:block;font-family:'Comfortaa',cursive;font-size:.95rem;color:var(--text)}
+.meta-hist-saldo{color:var(--green)!important}
+.meta-hist-periodo{font-size:.68rem;color:var(--muted);margin-top:6px}
+
 /* EMPTY / TOAST */
 .empty-state{text-align:center;padding:24px 0 16px;color:var(--muted);font-size:.83rem;font-weight:600}
 .empty-state .em-icon{font-size:2rem;display:block;margin-bottom:6px}
@@ -436,16 +450,42 @@ select.form-input{cursor:pointer}
     <button class="btn-add" id="btnRegistrar" type="button" disabled>🌹 Registrar pedido</button>
   </div>
   <div class="card">
-    <div class="ct-orn"><div class="ct-line"></div><div class="ct-text">Configurar metas</div><div class="ct-line"></div></div>
+    <div class="ct-orn"><div class="ct-line"></div><div class="ct-text">Configurar meta</div><div class="ct-line"></div></div>
+    <div class="form-group" style="margin-bottom:10px">
+      <div class="form-label">Nome da meta</div>
+      <input class="form-input" type="text" id="cfgMetaNome" placeholder="ex: Tablet, Celular…">
+    </div>
     <div class="config-row" style="margin-bottom:10px">
-      <div class="form-group" style="margin-bottom:0"><div class="form-label">Meta do tablet (R$)</div>
+      <div class="form-group" style="margin-bottom:0"><div class="form-label">Valor da meta (R$)</div>
         <input class="form-input" type="number" id="cfgMeta" placeholder="ex: 1500" min="1" step="0.01" inputmode="decimal"></div>
       <button class="btn-save" id="btnSalvarMeta" type="button">Salvar</button>
     </div>
-    <div class="config-row">
+    <div class="config-row" style="margin-bottom:10px">
       <div class="form-group" style="margin-bottom:0"><div class="form-label">Meta mensal (R$)</div>
         <input class="form-input" type="number" id="cfgMetaMensal" placeholder="ex: 300" min="1" step="0.01" inputmode="decimal"></div>
       <button class="btn-save" id="btnSalvarMetaMensal" type="button">Salvar</button>
+    </div>
+    <!-- Aporte externo -->
+    <div class="ct-orn" style="margin-top:4px"><div class="ct-line"></div><div class="ct-text">Aporte externo</div><div class="ct-line"></div></div>
+    <div class="form-group">
+      <div class="form-label">Descrição</div>
+      <input class="form-input" type="text" id="aporteDesc" placeholder="ex: complemento tablet">
+    </div>
+    <div class="config-row" style="margin-bottom:10px">
+      <div class="form-group" style="margin-bottom:0"><div class="form-label">Valor (R$)</div>
+        <input class="form-input" type="number" id="aporteVal" placeholder="0,00" min="0.01" step="0.01" inputmode="decimal"></div>
+      <button class="btn-save" id="btnAddAporte" type="button">+ Add</button>
+    </div>
+    <div id="aportesList"></div>
+    <!-- Concluir meta -->
+    <div id="concluirMetaSection" style="display:none;margin-top:8px">
+      <div class="ct-orn"><div class="ct-line"></div><div class="ct-text">🎉 Meta atingida!</div><div class="ct-line"></div></div>
+      <div class="form-group">
+        <div class="form-label">Valor utilizado (R$)</div>
+        <input class="form-input" type="number" id="metaGasto" placeholder="ex: 1500" min="0" step="0.01" inputmode="decimal">
+        <div style="font-size:.7rem;color:var(--muted);margin-top:4px">O saldo restante continuará para a próxima meta</div>
+      </div>
+      <button class="btn-add secondary" id="btnConcluirMeta" type="button">✅ Concluir e iniciar nova meta</button>
     </div>
   </div>
 </div>
@@ -491,6 +531,10 @@ select.form-input{cursor:pointer}
 
 <!-- TAB FINANCEIRO -->
 <div class="tab-pane" id="tab-financeiro">
+  <div class="card">
+    <div class="ct-orn"><div class="ct-line"></div><div class="ct-text">🏆 Metas concluídas</div><div class="ct-line"></div></div>
+    <div id="metasHistList"><div class="empty-state"><span class="em-icon">🎯</span>Nenhuma meta concluída ainda.</div></div>
+  </div>
   <div class="card">
     <div class="ct-orn"><div class="ct-line"></div><div class="ct-text">🏆 Ranking de clientes</div><div class="ct-line"></div></div>
     <div id="rankingList"><div class="empty-state"><span class="em-icon">🥜</span>Nenhum pedido ainda.</div></div>
@@ -619,7 +663,7 @@ function calcDestinacao(total, tipo) {
   };
 }
 
-const API_URL = 'https://script.google.com/macros/s/AKfycbxNFVLmO-LlEfxFVElZxkCdsSCJVirkWlt9Z_E6HIpSV8dEUquf5DRjfc8JRJrZjOBC-Q/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbxc3h2TFhX00I6_8fqlB5LB4Pn0obJ_4aSFmO2lrY9mmme8FfeL29gJs_tu5m_r0nBkKw/exec';
 const LS_KEY  = 'dulcisnina_v1';
 const POLL_MS = 30000;
 const DIAS_ALERTA = 3;
@@ -627,7 +671,7 @@ const DIAS_ALERTA = 3;
 // ═══════════════════════════════════════════════════
 //  ESTADO
 // ═══════════════════════════════════════════════════
-let state = { meta:0, metaMensal:0, pedidos:[], encomendas:[], custos:[] };
+let state = { meta:0, metaNome:'', metaInicio:'', metaMensal:0, pedidos:[], encomendas:[], custos:[], metas:[], aportes:[] };
 // carrinho: { tipo → qtd }
 let carrinho = {};
 let encCarrinho = {};
@@ -647,10 +691,14 @@ function cacheLoad() {
       // Mescla preservando todos os campos — nunca perde metaMensal, custos, encomendas
       state = {
         meta:        parsed.meta        || 0,
+        metaNome:    parsed.metaNome    || '',
+        metaInicio:  parsed.metaInicio  || '',
         metaMensal:  parsed.metaMensal  || 0,
         pedidos:     parsed.pedidos     || [],
         encomendas:  parsed.encomendas  || [],
         custos:      parsed.custos      || [],
+        metas:       parsed.metas       || [],
+        aportes:     parsed.aportes     || [],
       };
       // migração: vendas antigas → pedidos
       if (!state.pedidos.length && parsed.vendas && parsed.vendas.length) {
@@ -710,73 +758,74 @@ function calcularPedido(itens) {
 // ═══════════════════════════════════════════════════
 //  API
 // ═══════════════════════════════════════════════════
-async function apiCall(params) {
-  const parts = Object.entries(params).map(([k,v]) => k+'='+encodeURIComponent(String(v)));
-  const url = API_URL+'?'+parts.join('&');
-  const ctrl = new AbortController();
-  const t = setTimeout(()=>ctrl.abort(), 12000);
+// ═══════════════════════════════════════════════════
+//  API — POST para escrita, GET apenas para leitura
+// ═══════════════════════════════════════════════════
+async function apiGet(params) {
+  const parts = Object.entries(params).map(([k,v])=>k+'='+encodeURIComponent(String(v)));
+  const url   = API_URL+'?'+parts.join('&');
+  const ctrl  = new AbortController();
+  const t     = setTimeout(()=>ctrl.abort(), 15000);
   try {
-    const res  = await fetch(url,{signal:ctrl.signal});
+    const res  = await fetch(url, {signal:ctrl.signal});
     clearTimeout(t);
     const data = await res.json();
-    if (!data.ok) throw new Error(data.error||'Erro');
+    if (!data.ok) throw new Error(data.error||'Erro GET');
     return data;
   } catch(e) { clearTimeout(t); if(e.name==='AbortError') throw new Error('Tempo esgotado'); throw e; }
 }
 
-async function apiPedido(pedido) {
-  const url = API_URL+'?action=add_pedido&pedido='+encodeURIComponent(JSON.stringify(pedido));
+async function apiPost(body) {
   const ctrl = new AbortController();
-  const t = setTimeout(()=>ctrl.abort(), 12000);
+  const t    = setTimeout(()=>ctrl.abort(), 15000);
   try {
-    const res  = await fetch(url,{signal:ctrl.signal});
+    const res  = await fetch(API_URL, {
+      method:  'POST',
+      mode:    'cors',
+      headers: { 'Content-Type':'application/json' },
+      body:    JSON.stringify(body),
+      signal:  ctrl.signal,
+    });
     clearTimeout(t);
     const data = await res.json();
-    if (!data.ok) throw new Error(data.error||'Erro');
+    if (!data.ok) throw new Error(data.error||'Erro POST');
     return data;
-  } catch(e) { clearTimeout(t); throw e; }
+  } catch(e) { clearTimeout(t); if(e.name==='AbortError') throw new Error('Tempo esgotado'); throw e; }
 }
 
-async function apiEncomenda(enc) {
-  const url = API_URL+'?action=add_encomenda&enc='+encodeURIComponent(JSON.stringify(enc));
-  const ctrl = new AbortController();
-  const t = setTimeout(()=>ctrl.abort(), 12000);
-  try {
-    const res  = await fetch(url,{signal:ctrl.signal});
-    clearTimeout(t);
-    const data = await res.json();
-    if (!data.ok) throw new Error(data.error||'Erro');
-    return data;
-  } catch(e) { clearTimeout(t); throw e; }
-}
+// Atalhos semânticos
+const apiPedido    = p   => apiPost({ action:'add_pedido',    pedido:p });
+const apiEncomenda = enc => apiPost({ action:'add_encomenda', enc });
+const apiAporte    = a   => apiPost({ action:'add_aporte',    aporte:a });
+const apiMeta      = m   => apiPost({ action:'add_meta',      meta:m });
+const apiMetaUpd   = m   => apiPost({ action:'update_meta',   meta:m });
 
 async function syncFromSheets(showMsg) {
   setSyncStatus('syncing','Sincronizando…');
   try {
-    const data = await apiCall({action:'get_all'});
+    const data = await apiGet({action:'get_all'});
 
-    // Pedidos: Sheets é fonte de verdade
     if (data.pedidos && data.pedidos.length) state.pedidos = data.pedidos;
-    if ((data.meta || 0) > 0) state.meta = data.meta;
+    if ((data.meta||0) > 0)  state.meta      = data.meta;
+    if (data.metaNome)        state.metaNome  = data.metaNome;
+    if (data.metaInicio)      state.metaInicio= data.metaInicio;
+    if (data.metas)           state.metas     = data.metas;
+    if (data.aportes)         state.aportes   = data.aportes;
 
-    // Encomendas: mescla Sheets + local (evita apagar encomendas não salvas ainda)
+    // Encomendas: mescla — preserva pendentes locais
     if (data.encomendas && data.encomendas.length) {
-      const idsSheets = new Set(data.encomendas.map(e => e.id));
-      const localOnly = state.encomendas.filter(e => !idsSheets.has(e.id));
-      state.encomendas = [...data.encomendas, ...localOnly];
-      // Tenta subir as encomendas que só estão no local
-      for (const enc of localOnly) {
-        apiEncomenda(enc).catch(() => {});
-      }
+      const idsS   = new Set(data.encomendas.map(e=>e.id));
+      const soLocal= state.encomendas.filter(e=>!idsS.has(e.id));
+      state.encomendas = [...data.encomendas, ...soLocal];
+      for (const enc of soLocal) apiEncomenda(enc).catch(()=>{});
     }
 
-    // Custos: nunca sobrescreve — ficam só no cache local
-    cacheSave();
-    renderAll();
-    if (state.meta > 0) document.getElementById('cfgMeta').value = state.meta;
-    if (state.metaMensal > 0) document.getElementById('cfgMetaMensal').value = state.metaMensal;
-    const ts = new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
-    setSyncStatus('ok', showMsg ? 'Atualizado às '+ts : state.pedidos.length+' pedido(s) carregado(s)');
+    cacheSave(); renderAll();
+    if (state.meta>0)       document.getElementById('cfgMeta').value      = state.meta;
+    if (state.metaMensal>0) document.getElementById('cfgMetaMensal').value = state.metaMensal;
+    if (state.metaNome)     document.getElementById('cfgMetaNome').value   = state.metaNome;
+    const ts=new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+    setSyncStatus('ok', showMsg?'Atualizado às '+ts:state.pedidos.length+' pedido(s) carregado(s)');
   } catch(e) {
     setSyncStatus('error','Erro: '+String(e.message).slice(0,40));
   }
@@ -992,6 +1041,8 @@ function initEventos() {
   // Metas
   onTap(document.getElementById('btnSalvarMeta'),      salvarMeta);
   onTap(document.getElementById('btnSalvarMetaMensal'),salvarMetaMensal);
+  onTap(document.getElementById('btnAddAporte'),       addAporte);
+  onTap(document.getElementById('btnConcluirMeta'),    concluirMeta);
 
   // Registrar pedido
   onTap(document.getElementById('btnRegistrar'), registrarPedido);
@@ -1018,16 +1069,91 @@ function initEventos() {
 
 // ─── Metas ────────────────────────────────────────
 async function salvarMeta() {
-  const v=parseFloat(document.getElementById('cfgMeta').value);
-  if(!v||v<=0){showToast('Informe um valor válido');return;}
-  state.meta=v; cacheSave(); renderAll(); showToast('Meta salva! ✨');
-  try{ await apiCall({action:'set_meta',meta:v}); setSyncStatus('ok','Meta salva ✓'); }
-  catch(e){ setSyncStatus('error','Erro: '+String(e.message).slice(0,35)); }
+  const v    = parseFloat(document.getElementById('cfgMeta').value);
+  const nome = document.getElementById('cfgMetaNome').value.trim();
+  if (!v||v<=0){showToast('Informe um valor válido');return;}
+  state.meta     = v;
+  state.metaNome = nome;
+  if (!state.metaInicio) state.metaInicio = todayStr();
+  cacheSave(); renderAll(); showToast('Meta salva! ✨');
+  try {
+    await apiPost({ action:'set_config', meta:v, metaNome:nome, metaInicio:state.metaInicio });
+    setSyncStatus('ok','Meta salva no Sheets ✓');
+  } catch(e) { setSyncStatus('error','Erro: '+String(e.message).slice(0,35)); }
 }
+
 async function salvarMetaMensal() {
   const v=parseFloat(document.getElementById('cfgMetaMensal').value);
   if(!v||v<=0){showToast('Informe um valor válido');return;}
   state.metaMensal=v; cacheSave(); renderAll(); showToast('Meta mensal salva! 📅');
+}
+
+// ─── Aportes ──────────────────────────────────────
+async function addAporte() {
+  const desc = document.getElementById('aporteDesc').value.trim();
+  const val  = parseFloat(document.getElementById('aporteVal').value);
+  if (!desc){showToast('Informe a descrição');return;}
+  if (!val||val<=0){showToast('Informe um valor válido');return;}
+  const aporte = { id:Date.now(), descricao:desc, valor:val, data:todayStr() };
+  state.aportes.unshift(aporte); cacheSave();
+  document.getElementById('aporteDesc').value='';
+  document.getElementById('aporteVal').value='';
+  renderAll(); showToast('💰 Aporte registrado!');
+  operacaoPendente=true; setSyncStatus('syncing','Salvando aporte…');
+  try { await apiAporte(aporte); setSyncStatus('ok','Aporte salvo ✓'); }
+  catch(e){ setSyncStatus('error','Erro: '+String(e.message).slice(0,35)); }
+  finally { setTimeout(()=>{operacaoPendente=false;},3000); }
+}
+
+async function removerAporte(id) {
+  state.aportes = state.aportes.filter(a=>a.id!==id); cacheSave(); renderAll();
+  apiPost({action:'delete_aporte', id}).catch(()=>{});
+}
+
+// ─── Concluir meta ────────────────────────────────
+async function concluirMeta() {
+  const gasto = parseFloat(document.getElementById('metaGasto').value)||0;
+  if (!gasto){showToast('Informe o valor utilizado');return;}
+
+  // Calcula total arrecadado (lucro dos pedidos pagos + aportes)
+  const lucro    = state.pedidos.filter(p=>p.pago).reduce((s,p)=>s+(parseFloat(p.meta)||0),0);
+  const aportes  = state.aportes.reduce((s,a)=>s+(parseFloat(a.valor)||0),0);
+  const arrecadado = lucro + aportes;
+  const saldo    = Math.max(0, arrecadado - gasto);
+
+  // Arquiva a meta
+  const metaArq = {
+    id:          Date.now(),
+    nome:        state.metaNome || 'Meta',
+    valor:       state.meta,
+    inicio:      state.metaInicio || todayStr(),
+    fim:         todayStr(),
+    arrecadado,
+    gasto,
+    saldo,
+    concluida:   true,
+  };
+  state.metas.unshift(metaArq);
+
+  // Zera meta atual mas preserva saldo
+  state.meta       = 0;
+  state.metaNome   = '';
+  state.metaInicio = '';
+
+  cacheSave(); renderAll();
+  document.getElementById('cfgMeta').value    = '';
+  document.getElementById('cfgMetaNome').value= '';
+  document.getElementById('metaGasto').value  = '';
+
+  showToast('🎉 Meta concluída! Saldo: '+fmtBRL(saldo));
+
+  operacaoPendente=true; setSyncStatus('syncing','Salvando…');
+  try {
+    await apiMeta(metaArq);
+    await apiPost({ action:'set_config', meta:0, metaNome:'', metaInicio:'' });
+    setSyncStatus('ok','Meta arquivada ✓');
+  } catch(e){ setSyncStatus('error','Erro: '+String(e.message).slice(0,35)); }
+  finally { setTimeout(()=>{operacaoPendente=false;},3000); }
 }
 
 // ─── Registrar pedido ─────────────────────────────
@@ -1067,7 +1193,7 @@ async function registrarPedido() {
 async function removerPedido(id) {
   state.pedidos=state.pedidos.filter(p=>p.id!==id); cacheSave(); renderAll(); showToast('Pedido removido');
   operacaoPendente=true; setSyncStatus('syncing','Removendo…');
-  try{ await apiCall({action:'delete_pedido',id:String(id)}); setSyncStatus('ok','Removido ✓'); }
+  try{ await apiPost({action:'delete_pedido',id:Number(id)}); setSyncStatus('ok','Removido ✓'); }
   catch(e){ setSyncStatus('error','Erro: '+String(e.message).slice(0,35)); }
   finally{ setTimeout(()=>{operacaoPendente=false;},3000); }
 }
@@ -1079,7 +1205,7 @@ async function togglePagamento(id) {
   showToast(novo?'✅ Marcado como pago':'↩ Marcado como pendente');
   operacaoPendente=true; setSyncStatus('syncing','Salvando…');
   try{
-    await apiCall({action:'update_pago',id:String(id),pago:novo?'1':'0'});
+    await apiPost({action:'update_pago',id:Number(id),pago:novo});
     setSyncStatus('ok','Pago atualizado ✓');
   } catch(e){
     try{ await apiPedido({...state.pedidos[idx]}); setSyncStatus('ok','Pago salvo ✓'); }
@@ -1106,7 +1232,7 @@ async function salvarEdicao() {
   cacheSave(); renderAll(); fecharModal(); showToast('Pedido atualizado ✓');
   operacaoPendente=true; setSyncStatus('syncing','Atualizando…');
   try{
-    await apiCall({action:'delete_pedido',id:String(id)});
+    await apiPost({action:'delete_pedido',id:Number(id)});
     await apiPedido({...state.pedidos[idx]});
     setSyncStatus('ok','Atualizado no Sheets ✓');
   } catch(e){ setSyncStatus('error','Erro: '+String(e.message).slice(0,35)); }
@@ -1147,7 +1273,7 @@ function removerEncomenda(id) {
   state.encomendas = state.encomendas.filter(e => e.id !== id);
   cacheSave(); renderEncomendas();
   operacaoPendente = true;
-  apiCall({action:'delete_encomenda', id:String(id)})
+  apiPost({action:'delete_encomenda', id:Number(id)})
     .catch(() => {})
     .finally(() => setTimeout(() => { operacaoPendente = false; }, 3000));
 }
@@ -1205,40 +1331,42 @@ function exportarCSV() {
 // ═══════════════════════════════════════════════════
 function renderAll() {
   renderMeta(); renderMetaMensal(); renderKPIs(); renderCaixinhas();
-  renderAlertas(); renderTabela(); renderEncomendas();
-  // Sempre renderiza gráficos e financeiro para garantir dados atualizados
-  // Chart.js só cria os canvas quando visíveis, mas atualiza dados sempre
-  if (document.getElementById('tab-graficos').classList.contains('active'))   renderGraficos();
-  if (document.getElementById('tab-financeiro').classList.contains('active')) renderFinanceiro();
-  // Marca como "precisa atualizar" para quando o usuário abrir a aba
+  renderAlertas(); renderTabela(); renderEncomendas(); renderAportes();
+  if(document.getElementById('tab-graficos').classList.contains('active'))   renderGraficos();
+  if(document.getElementById('tab-financeiro').classList.contains('active')) renderFinanceiro();
   window._graficosPrecisaAtualizar   = true;
   window._financeiroPrecisaAtualizar = true;
 }
 
 function renderMeta() {
-  const pagas = state.pedidos.filter(p => p.pago);
-  const pends  = state.pedidos.filter(p => !p.pago);
-  const lucroRecebido = pagas.reduce((s,p) => s+(parseFloat(p.meta)||0), 0);
-  const lucroPendente = pends.reduce((s,p)  => s+(parseFloat(p.meta)||0), 0);
-  const meta = state.meta || 0;
-  const pct  = meta > 0 ? Math.min(100, (lucroRecebido / meta) * 100) : 0;
+  const pagas         = state.pedidos.filter(p=>p.pago);
+  const pends         = state.pedidos.filter(p=>!p.pago);
+  const lucroRecebido = pagas.reduce((s,p)=>s+(parseFloat(p.meta)||0),0);
+  const lucroPendente = pends.reduce((s,p)=>s+(parseFloat(p.meta)||0),0);
+  const totalAportes  = (state.aportes||[]).reduce((s,a)=>s+(parseFloat(a.valor)||0),0);
+  const totalMeta     = lucroRecebido + totalAportes;
+  const meta = state.meta||0;
+  const pct  = meta>0 ? Math.min(100,(totalMeta/meta)*100) : 0;
 
-  document.getElementById('totalArrecadado').textContent = fmtBRL(lucroRecebido);
-  document.getElementById('metaValor').textContent       = meta > 0 ? fmtBRL(meta) : '—';
-  document.getElementById('progressFill').style.width    = pct.toFixed(1) + '%';
-  document.getElementById('progressPct').innerHTML       = '<strong>' + pct.toFixed(0) + '%</strong> concluído';
-  document.getElementById('faltaValor').textContent      = meta > 0 ? fmtBRL(Math.max(0, meta - lucroRecebido)) : '— (defina a meta)';
-  document.getElementById('goalBanner').classList.toggle('show', meta > 0 && lucroRecebido >= meta);
+  document.getElementById('totalArrecadado').textContent = fmtBRL(totalMeta);
+  document.getElementById('metaValor').textContent       = meta>0 ? fmtBRL(meta) : '—';
+  document.getElementById('progressFill').style.width    = pct.toFixed(1)+'%';
+  document.getElementById('progressPct').innerHTML       = '<strong>'+pct.toFixed(0)+'%</strong> concluído';
+  document.getElementById('faltaValor').textContent      = meta>0 ? fmtBRL(Math.max(0,meta-totalMeta)) : '— (defina a meta)';
+  document.getElementById('goalBanner').classList.toggle('show', meta>0&&totalMeta>=meta);
 
-  const pr = document.getElementById('metaPendenteRow');
-  if (lucroPendente > 0) {
-    pr.style.display = 'block';
-    document.getElementById('metaPendenteLabel').textContent = '+ ' + fmtBRL(lucroPendente) + ' aguardando recebimento';
-  } else {
-    pr.style.display = 'none';
-  }
-  const cfg = document.getElementById('cfgMeta');
-  if (!cfg.value && meta > 0) cfg.value = meta;
+  // Mostra/oculta seção de concluir meta
+  const sec = document.getElementById('concluirMetaSection');
+  if (sec) sec.style.display = (meta>0&&totalMeta>=meta) ? 'block' : 'none';
+
+  const pr=document.getElementById('metaPendenteRow');
+  if(lucroPendente>0){
+    pr.style.display='block';
+    document.getElementById('metaPendenteLabel').textContent='+ '+fmtBRL(lucroPendente)+' aguardando recebimento';
+  } else { pr.style.display='none'; }
+
+  const cfg=document.getElementById('cfgMeta'); if(!cfg.value&&meta>0) cfg.value=meta;
+  const cfgNome=document.getElementById('cfgMetaNome'); if(cfgNome&&!cfgNome.value&&state.metaNome) cfgNome.value=state.metaNome;
 }
 
 function renderMetaMensal() {
@@ -1394,7 +1522,47 @@ function renderEncomendas() {
   list.querySelectorAll('.btn-enc-del').forEach(b=>onTap(b,()=>removerEncomenda(Number(b.dataset.id))));
 }
 
+function renderAportes() {
+  const el = document.getElementById('aportesList');
+  if (!el) return;
+  const aportes = state.aportes || [];
+  if (!aportes.length) { el.innerHTML=''; return; }
+  el.innerHTML = aportes.map(a =>
+    '<div class="aporte-item">'
+    +'<span><span class="aporte-badge">💰 Aporte</span> <strong style="margin-left:6px">'+a.descricao+'</strong>'
+    +'<div style="font-size:.68rem;color:var(--muted)">'+fmtShort(a.data)+'</div></span>'
+    +'<span style="display:flex;align-items:center;gap:8px"><strong style="color:var(--green)">+'+fmtBRL(a.valor)+'</strong>'
+    +'<button class="btn-del" data-id="'+a.id+'" type="button" style="min-height:32px;min-width:28px">✕</button></span>'
+    +'</div>'
+  ).join('');
+  el.querySelectorAll('.btn-del').forEach(b=>onTap(b,()=>removerAporte(Number(b.dataset.id))));
+}
+
 function renderFinanceiro() {
+  // Histórico de metas concluídas
+  const metasEl = document.getElementById('metasHistList');
+  if (metasEl) {
+    const metas = state.metas || [];
+    if (!metas.length) {
+      metasEl.innerHTML='<div class="empty-state"><span class="em-icon">🎯</span>Nenhuma meta concluída ainda.</div>';
+    } else {
+      metasEl.innerHTML = metas.map(m => {
+        const ini = m.inicio ? m.inicio.split('-').reverse().join('/') : '—';
+        const fim = m.fim   ? m.fim.split('-').reverse().join('/')   : '—';
+        return '<div class="meta-hist-card">'
+          +'<div class="meta-hist-nome">🎯 '+m.nome+'</div>'
+          +'<div class="meta-hist-grid">'
+          +'<div class="meta-hist-item">Meta<span>'+fmtBRL(m.valor)+'</span></div>'
+          +'<div class="meta-hist-item">Arrecadado<span>'+fmtBRL(m.arrecadado)+'</span></div>'
+          +'<div class="meta-hist-item">Utilizado<span>'+fmtBRL(m.gasto)+'</span></div>'
+          +'<div class="meta-hist-item">Saldo<span class="meta-hist-saldo">'+fmtBRL(m.saldo)+'</span></div>'
+          +'</div>'
+          +'<div class="meta-hist-periodo">📅 '+ini+' → '+fim+'</div>'
+          +'</div>';
+      }).join('');
+    }
+  }
+
   // Ranking
   const map={};
   state.pedidos.filter(p=>p.cliente).forEach(p=>{
@@ -1591,27 +1759,29 @@ document.addEventListener('DOMContentLoaded', async ()=>{
 
   setSyncStatus('syncing','Carregando…');
   try {
-    const data = await apiCall({action:'get_all'});
+    const data = await apiGet({action:'get_all'});
     const temPedidosNoSheets = (data.pedidos||[]).length > 0;
     const temMetaNoSheets    = (data.meta||0) > 0;
 
     if (temPedidosNoSheets || temMetaNoSheets) {
-      // Sheets tem dados — usa como fonte de verdade para pedidos/meta
-      state.meta    = data.meta    || state.meta;
-      state.pedidos = data.pedidos || [];
+      state.meta      = data.meta      || state.meta;
+      state.metaNome  = data.metaNome  || state.metaNome  || '';
+      state.metaInicio= data.metaInicio|| state.metaInicio|| '';
+      state.pedidos   = data.pedidos   || [];
+      if (data.metas)   state.metas   = data.metas;
+      if (data.aportes) state.aportes = data.aportes;
 
-      // Encomendas: mescla igual ao syncFromSheets
+      // Encomendas: mescla
       if (data.encomendas && data.encomendas.length) {
         const idsSheets = new Set(data.encomendas.map(e => e.id));
         const localOnly = state.encomendas.filter(e => !idsSheets.has(e.id));
         state.encomendas = [...data.encomendas, ...localOnly];
       }
-      // metaMensal e custos: preserva o que estava no cache local
-      // (nunca vêm do Sheets)
 
       cacheSave(); renderAll();
-      if (state.meta > 0) document.getElementById('cfgMeta').value = state.meta;
+      if (state.meta > 0)       document.getElementById('cfgMeta').value      = state.meta;
       if (state.metaMensal > 0) document.getElementById('cfgMetaMensal').value = state.metaMensal;
+      if (state.metaNome)       document.getElementById('cfgMetaNome').value   = state.metaNome;
       setSyncStatus('ok', state.pedidos.length+' pedido(s) carregado(s)');
     } else {
       // Sheets vazio — verifica se há dados locais para migrar
@@ -1640,7 +1810,7 @@ document.addEventListener('DOMContentLoaded', async ()=>{
           setSyncStatus('syncing', 'Enviando '+pedidosParaMigrar.length+' pedido(s) para o Sheets…');
           // Sobe meta se houver
           if (dadosParaMigrar.meta > 0) {
-            await apiCall({action:'set_meta', meta: dadosParaMigrar.meta});
+            await apiPost({action:'set_config', meta:dadosParaMigrar.meta});
             state.meta = dadosParaMigrar.meta;
           }
           // Sobe pedidos um a um
@@ -1669,3 +1839,4 @@ document.addEventListener('DOMContentLoaded', async ()=>{
 </script>
 </body>
 </html>
+
